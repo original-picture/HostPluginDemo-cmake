@@ -120,6 +120,7 @@ private:
     void pluginChanged();
     void clearPlugin();
 
+
     static constexpr auto buttonHeight = 30;
 
     HostAudioProcessorImpl& hostProcessor;

@@ -43,57 +43,65 @@ bool HostAudioProcessorImpl::isBusesLayoutSupported (const BusesLayout& layouts)
 
 void HostAudioProcessorImpl::prepareToPlay (double sr, int bs) {
     const juce::ScopedLock sl (innerMutex);
-    
+
     active = true;
-    
-    if (inner != nullptr) {
-        inner->setRateAndBufferSizeDetails (sr, bs);
-        inner->prepareToPlay (sr, bs);
+
+    if (inactive_inner() != nullptr) {
+        inactive_inner()->setRateAndBufferSizeDetails (sr, bs);
+        inactive_inner()->prepareToPlay (sr, bs);
     }
 }
 
 void HostAudioProcessorImpl::releaseResources() {
     const juce::ScopedLock sl (innerMutex);
-    
+
     active = false;
-    
-    if (inner != nullptr)
-        inner->releaseResources();
+
+    if (inactive_inner() != nullptr)
+        inactive_inner()->releaseResources();
+
+    if (active_inner() != nullptr)
+        active_inner()->releaseResources();
 }
 
 void HostAudioProcessorImpl::reset() {
     const juce::ScopedLock sl (innerMutex);
-    
-    if (inner != nullptr)
-    inner->reset();
+
+    if (active_inner())
+        active_inner()->reset();
 }
 
 // In this example, we don't actually pass any audio through the inner processor.
 // In a 'real' plugin, we'd need to add some synchronisation to ensure that the inner
 // plugin instance was never modified (deleted, replaced etc.) during a call to processBlock.
-void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<float>& buf, juce::MidiBuffer&) {
+void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<float>& audio_buffer, juce::MidiBuffer& midi_buffer) {
     jassert (! isUsingDoublePrecision());
 
-    for(unsigned channel_i = 0; channel_i < buf.getNumChannels(); ++channel_i) {
+    bool current_inner_index = active_ping_pong_index_;
+
+    auto& inner = inner_ping_pong[current_inner_index];
+    if(inner) {
+        inner->processBlock(audio_buffer, midi_buffer);
+    }
+
+    /*for(unsigned channel_i = 0; channel_i < buf.getNumChannels(); ++channel_i) {
         auto dest = buf.getWritePointer(channel_i);
         auto src = buf.getReadPointer(channel_i);
 
         for(unsigned sample_i = 0; sample_i < buf.getNumSamples(); ++sample_i) {
             dest[sample_i] = src[sample_i];
         }
-    }
+    }*/
 }
 
-void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& buf, juce::MidiBuffer&) {
-    jassert (isUsingDoublePrecision());
+void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& audio_buffer, juce::MidiBuffer& midi_buffer) {
+    jassert (! isUsingDoublePrecision());
 
-    for(unsigned channel_i = 0; channel_i < buf.getNumChannels(); ++channel_i) {
-        auto dest = buf.getWritePointer(channel_i);
-        auto src = buf.getReadPointer(channel_i);
+    bool current_inner_index = active_ping_pong_index_;
 
-        for(unsigned sample_i = 0; sample_i < buf.getNumSamples(); ++sample_i) {
-            dest[sample_i] = src[sample_i];
-        }
+    auto& inner = inner_ping_pong[current_inner_index];
+    if(inner) {
+        inner->processBlock(audio_buffer, midi_buffer);
     }
 }
 
@@ -102,13 +110,13 @@ void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
 
     juce::XmlElement xml ("state");
 
-    if(inner != nullptr) {
+    if(active_inner() != nullptr) {
         xml.setAttribute (editorStyleTag, (int) editorStyle);
-        xml.addChildElement (inner->getPluginDescription().createXml().release());
+        xml.addChildElement (active_inner()->getPluginDescription().createXml().release());
         xml.addChildElement (
             [this] {
                 juce::MemoryBlock innerState;
-                inner->getStateInformation (innerState);
+                active_inner()->getStateInformation (innerState);
 
                 auto stateNode = std::make_unique<juce::XmlElement> (innerStateTag);
                 stateNode->addTextElement (innerState.toBase64Encoding());
@@ -152,11 +160,11 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
             return;
         }
 
-        inner = std::move (instance);
+        inactive_inner() = std::move (instance);
         editorStyle = where;
 
-        if (inner != nullptr && ! mb.isEmpty())
-            inner->setStateInformation (mb.getData(), (int) mb.getSize());
+        if (inactive_inner() != nullptr && ! mb.isEmpty())
+            inactive_inner()->setStateInformation (mb.getData(), (int) mb.getSize());
 
         // In a 'real' plugin, we'd also need to set the bus configuration of the inner plugin.
         // One possibility would be to match the bus configuration of the wrapper plugin, but
@@ -169,8 +177,8 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
         // exactly match this layout.
 
         if(active) {
-            inner->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
-            inner->prepareToPlay (getSampleRate(), getBlockSize());
+            inactive_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
+            inactive_inner()->prepareToPlay (getSampleRate(), getBlockSize());
         }
 
         juce::NullCheckedInvocation::invoke (pluginChanged);
@@ -182,18 +190,18 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
 void HostAudioProcessorImpl::clearPlugin() {
     const juce::ScopedLock sl (innerMutex);
 
-    inner = nullptr;
+    inactive_inner() = nullptr;
     juce::NullCheckedInvocation::invoke (pluginChanged);
 }
 
 bool HostAudioProcessorImpl::isPluginLoaded() const {
     const juce::ScopedLock sl (innerMutex);
-    return inner != nullptr;
+    return active_inner() != nullptr;
 }
 
 std::unique_ptr<juce::AudioProcessorEditor> HostAudioProcessorImpl::createInnerEditor() const {
     const juce::ScopedLock sl (innerMutex);
-    return rawToUniquePtr (inner->hasEditor() ? inner->createEditorIfNeeded() : nullptr);
+    return rawToUniquePtr (active_inner()->hasEditor() ? active_inner()->createEditorIfNeeded() : nullptr);
 }
 
 void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* source) {
@@ -207,6 +215,15 @@ void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* so
     }
 }
 
+void HostAudioProcessorImpl::swap_active_inactive() {
+                                              // xoring with 1 is equivalent to boolean negation
+    active_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
+
+    inactive_inner().reset();
+}
+
+
+
 
 
 juce::AudioProcessorEditor* HostAudioProcessor::createEditor() { return new HostAudioProcessorEditor (*this); }
@@ -216,3 +233,4 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new HostAudioProcessor();
 }
+

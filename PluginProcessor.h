@@ -57,12 +57,27 @@ public:
     juce::KnownPluginList pluginList;
     std::function<void()> pluginChanged;
 
+
+    void set_plugin_changed_flag();
+
+    void swap_active_inactive();
+
+
 private:
     juce::CriticalSection innerMutex;
     //std::unique_ptr<juce::AudioPluginInstance> inner;
-    std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2];
-    bool current_ping_pong_index = 0;
-    std::atomic<bool> plugin_changed = false;
+    std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2] = {nullptr, nullptr};
+
+    std::atomic<unsigned char> active_ping_pong_index_ = 0;
+
+    inline std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() { return inner_ping_pong[active_ping_pong_index_];  }
+    inline std::unique_ptr<juce::AudioPluginInstance>& active_inner()   { return inner_ping_pong[!active_ping_pong_index_]; }
+
+    inline const std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() const { return inner_ping_pong[active_ping_pong_index_];  }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& active_inner()   const { return inner_ping_pong[!active_ping_pong_index_]; }
+
+    std::atomic<bool> inactive_plugin_in_use = false; // this is a dumb and confusing variable name
+
 
     EditorStyle editorStyle = EditorStyle{};
     bool active = false;

@@ -2,8 +2,8 @@
 #include "PluginEditor.h"
 //
 //==============================================================================
-                                                                            // we need the juce even though I already did using namespace juce
-                                                                            // because one of juce's headers pulls in one of the windows headers that declares a different type called Rectangle lol
+
+
 static void doLayout (juce::Component* main, juce::Component& bottom, int bottomHeight, juce::Rectangle<int> bounds) {
     juce::Grid grid;
     grid.setGap (juce::Grid::Px { margin });
@@ -174,6 +174,8 @@ void HostAudioProcessorEditor::pluginChanged() {
         editor = nullptr;
         setSize (500, 500);
     }
+
+    hostProcessor.swap_active_inactive();
 }
 
 void HostAudioProcessorEditor::clearPlugin() {
