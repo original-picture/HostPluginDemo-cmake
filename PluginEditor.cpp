@@ -175,6 +175,8 @@ void HostAudioProcessorEditor::pluginChanged() {
         setSize (500, 500);
     }
 
+   // this->currentEditorComponent = nullptr;
+
     hostProcessor.swap_active_inactive();
 }
 

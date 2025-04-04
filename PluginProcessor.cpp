@@ -29,6 +29,8 @@ HostAudioProcessorImpl::HostAudioProcessorImpl()
 }
 
 bool HostAudioProcessorImpl::isBusesLayoutSupported (const BusesLayout& layouts) const  {
+    buses_layout = layouts;
+
     const auto& mainOutput = layouts.getMainOutputChannelSet();
     const auto& mainInput  = layouts.getMainInputChannelSet();
     
@@ -177,6 +179,7 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
         // exactly match this layout.
 
         if(active) {
+            jassert(inactive_inner()->setBusesLayout(buses_layout));
             inactive_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
             inactive_inner()->prepareToPlay (getSampleRate(), getBlockSize());
         }
@@ -219,7 +222,7 @@ void HostAudioProcessorImpl::swap_active_inactive() {
                                               // xoring with 1 is equivalent to boolean negation
     active_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
 
-    inactive_inner().reset();
+    //inactive_inner().reset();
 }
 
 

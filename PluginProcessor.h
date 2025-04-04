@@ -64,6 +64,8 @@ public:
 
 
 private:
+    mutable BusesLayout buses_layout;
+
     juce::CriticalSection innerMutex;
     //std::unique_ptr<juce::AudioPluginInstance> inner;
     std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2] = {nullptr, nullptr};
