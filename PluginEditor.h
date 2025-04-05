@@ -2,12 +2,6 @@
 
 #include "PluginProcessor.h"
 
-//#include "juce_audio_processors/format_types/juce_VST3Headers.h"
-
-//#include "juce_audio_processors/format_types/juce_VST3PluginFormat.h"
-
-//space juce;
-
 //==============================================================================
 constexpr auto margin = 10;
 
@@ -29,6 +23,10 @@ public:
         addAndMakeVisible (pluginListComponent);
         addAndMakeVisible (buttons);
 
+
+        // this is a lambda that returns a lambda that calls a lambda lol
+        // the outermost lambda is used to select the EditorStyle
+        // the lambda one layer in is used to
         const auto getCallback = [this, &list, cb = std::forward<Callback> (callback)] (EditorStyle style)
         {
             return [this, &list, cb, style]
@@ -36,8 +34,9 @@ public:
                 const auto index = pluginListComponent.getTableListBox().getSelectedRow();
                 const auto& types = list.getTypes();
 
-                if (juce::isPositiveAndBelow (index, types.size()))
+                if (juce::isPositiveAndBelow (index, types.size())) {
                     juce::NullCheckedInvocation::invoke (cb, types.getReference (index), style);
+                }
             };
         };
 

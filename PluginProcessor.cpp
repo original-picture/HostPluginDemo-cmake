@@ -179,12 +179,24 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
         // exactly match this layout.
 
         if(active) {
-            jassert(inactive_inner()->setBusesLayout(buses_layout));
-            inactive_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
-            inactive_inner()->prepareToPlay (getSampleRate(), getBlockSize());
+            if(!inactive_inner()->checkBusesLayoutSupported(buses_layout)) {
+                // this is called from the gui thread so it's okay
+                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Error!",
+                                                                                                           "the plugin you're trying to load doesn't support the bus layout of the host plugin!",
+                                                                                                           "okay ;_;");
+
+                inactive_inner().reset();
+            }
+            else {
+                jassert(inactive_inner()->setBusesLayout(buses_layout));
+                inactive_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
+                inactive_inner()->prepareToPlay (getSampleRate(), getBlockSize());
+
+                juce::NullCheckedInvocation::invoke (pluginChanged);
+            }
         }
 
-        juce::NullCheckedInvocation::invoke (pluginChanged);
+        // juce::NullCheckedInvocation::invoke (pluginChanged);
     };
 
     pluginFormatManager.createPluginInstanceAsync (pd, getSampleRate(), getBlockSize(), callback);
