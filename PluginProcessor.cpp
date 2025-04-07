@@ -29,8 +29,6 @@ HostAudioProcessorImpl::HostAudioProcessorImpl()
 }
 
 bool HostAudioProcessorImpl::isBusesLayoutSupported (const BusesLayout& layouts) const  {
-    buses_layout = layouts;
-
     const auto& mainOutput = layouts.getMainOutputChannelSet();
     const auto& mainInput  = layouts.getMainInputChannelSet();
     
@@ -48,7 +46,7 @@ void HostAudioProcessorImpl::prepareToPlay (double sr, int bs) {
 
     active = true;
 
-    if (inactive_inner() != nullptr) {
+    if (inactive_inner() != nullptr) { // TODO: do I need to do active_inner() here too? Also shouldn't I be setting the bus layout too?
         inactive_inner()->setRateAndBufferSizeDetails (sr, bs);
         inactive_inner()->prepareToPlay (sr, bs);
     }
@@ -178,25 +176,31 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
         // configuration that will be used. The AudioBuffer passed to the inner plugin must also
         // exactly match this layout.
 
-        if(active) {
-            if(!inactive_inner()->checkBusesLayoutSupported(buses_layout)) {
-                // this is called from the gui thread so it's okay
-                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Error!",
-                                                                                                           "the plugin you're trying to load doesn't support the bus layout of the host plugin!",
-                                                                                                           "okay ;_;");
+        // ^
+        // I did what the juce people described here
+        // --original-picture
+
+
+        if(active) { // I don't understand what active does --original-picture
+            if(!inactive_inner()->checkBusesLayoutSupported(getBusesLayout())) {
+                // this is called from the gui thread so it's okay --original-picture
+                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
+                                                       "Error!",
+                                                            "the plugin you're trying to load doesn't support the bus layout of the host plugin!",
+                                                            "okay ;_;");
 
                 inactive_inner().reset();
             }
             else {
-                jassert(inactive_inner()->setBusesLayout(buses_layout));
+                jassert(inactive_inner()->setBusesLayout(getBusesLayout()));
                 inactive_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
                 inactive_inner()->prepareToPlay (getSampleRate(), getBlockSize());
 
-                juce::NullCheckedInvocation::invoke (pluginChanged);
-            }
-        }
+                juce::NullCheckedInvocation::invoke (pluginChanged); // I moved this up here and I can't remember why lol
+            }                                                           // I've tested both versions and they seem to do the same thing,
+        }                                                               // but that could be because any difference in behavior is masked by the double-load bug --original-picture
 
-        // juce::NullCheckedInvocation::invoke (pluginChanged);
+        // juce::NullCheckedInvocation::invoke (pluginChanged); // this line is how it is in the original HostPluginDemo.h --original-picture
     };
 
     pluginFormatManager.createPluginInstanceAsync (pd, getSampleRate(), getBlockSize(), callback);
@@ -205,7 +209,7 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
 void HostAudioProcessorImpl::clearPlugin() {
     const juce::ScopedLock sl (innerMutex);
 
-    inactive_inner() = nullptr;
+    inactive_inner() = nullptr; // TODO: shouldn't this be active_inner?
     juce::NullCheckedInvocation::invoke (pluginChanged);
 }
 
@@ -216,7 +220,8 @@ bool HostAudioProcessorImpl::isPluginLoaded() const {
 
 std::unique_ptr<juce::AudioProcessorEditor> HostAudioProcessorImpl::createInnerEditor() const {
     const juce::ScopedLock sl (innerMutex);
-    return rawToUniquePtr (active_inner()->hasEditor() ? active_inner()->createEditorIfNeeded() : nullptr);
+    return rawToUniquePtr (inactive_inner()->hasEditor() ? inactive_inner()->createEditorIfNeeded() : nullptr);
+    // changing this line from using active_inner() to using inactive_inner() got rid of the double load bug, but now this line segfaults when you close a plugin
 }
 
 void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* source) {

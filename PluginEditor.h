@@ -126,7 +126,7 @@ private:
     PluginLoaderComponent loader;
     std::unique_ptr<Component> editor;
     PluginEditorComponent* currentEditorComponent = nullptr;
-    juce::ScopedValueSetter<std::function<void()>> scopedCallback;
-    juce::TextButton closeButton { "Close Plugin" };
-    float currentScaleFactor = 1.0f;
-};
+    juce::ScopedValueSetter<std::function<void()>> scopedCallback; // a ScopedValueSetter is used here in order to automatically
+    juce::TextButton closeButton { "Close Plugin" };    // reset the processor's pluginChanged callback to null if the editor gets destroyed
+    float currentScaleFactor = 1.0f;                               // the processor then uses juce::NullCheckedInvocation::invoke()
+};                                                                 // in order to avoid calling HostAudioProcessorEditor::pluginChanged() with a dangling this pointer --original-picture

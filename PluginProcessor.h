@@ -7,6 +7,7 @@
 
 enum class EditorStyle { thisWindow, newWindow };
 
+class HostAudioProcessorEditor;
 
 //==============================================================================
 class HostAudioProcessorImpl : public  juce::AudioProcessor,
@@ -64,25 +65,30 @@ public:
 
 
 private:
-    mutable BusesLayout buses_layout;
+    juce::CriticalSection innerMutex; // I don't understand why this is necessary, because this mutex only ever gets locked on the message thread
+                                      // maybe they were planning on locking it in processBlock() (on the audio thread), which would make sense functionally, because things like the inner plugin changing need to be synchronized
+                                      // but mutexes really shouldn't be used on the audio thread to begin with, so idk --original-picture
 
-    juce::CriticalSection innerMutex;
     //std::unique_ptr<juce::AudioPluginInstance> inner;
-    std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2] = {nullptr, nullptr};
+    std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2] = {nullptr, nullptr}; // my lock-free solution for synchronizing plugin changes is to hold two AudioPluginInstances and ping pong between them using an atomic index
+                                                                                                // that one plugin can be getting loaded on the message thread while the other is being used on the audio thread and they don't mess with each other's data
+                                                                                                // --original-picture
 
-    std::atomic<unsigned char> active_ping_pong_index_ = 0;
+    std::atomic<unsigned char> active_ping_pong_index_ = 0; // I would have used a bool for this variable (because the index can only ever be 0 or 1),
+                                                            // but I need to atomically flip it and std::atomic<bool> has no atomic negation operation
+                                                            // so instead I use unsigned char and flip it by atomically xoring it with 1
 
-    inline std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() { return inner_ping_pong[active_ping_pong_index_];  }
-    inline std::unique_ptr<juce::AudioPluginInstance>& active_inner()   { return inner_ping_pong[!active_ping_pong_index_]; }
 
-    inline const std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() const { return inner_ping_pong[active_ping_pong_index_];  }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& active_inner()   const { return inner_ping_pong[!active_ping_pong_index_]; }
+    inline       std::unique_ptr<juce::AudioPluginInstance>& inactive_inner()       { return inner_ping_pong[!active_ping_pong_index_];  }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() const { return inner_ping_pong[!active_ping_pong_index_];  }
 
-    std::atomic<bool> inactive_plugin_in_use = false; // this is a dumb and confusing variable name
+    inline       std::unique_ptr<juce::AudioPluginInstance>& active_inner()         { return inner_ping_pong[active_ping_pong_index_]; }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& active_inner()   const { return inner_ping_pong[active_ping_pong_index_]; }
+
 
 
     EditorStyle editorStyle = EditorStyle{};
-    bool active = false;
+    bool active = false; // I don't know what this does --original-picture
     juce::ScopedMessageBox messageBox;
 
     static constexpr const char* innerStateTag = "inner_state";

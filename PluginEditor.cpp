@@ -96,6 +96,7 @@ HostAudioProcessorEditor::HostAudioProcessorEditor(HostAudioProcessorImpl& owner
     hostProcessor.pluginChanged();
 
     closeButton.onClick = [this] { clearPlugin(); };
+
 }
 
 void HostAudioProcessorEditor::paint (juce::Graphics& g) {
@@ -135,12 +136,14 @@ void HostAudioProcessorEditor::pluginChanged() {
     loader.setVisible (! hostProcessor.isPluginLoaded());
     closeButton.setVisible (hostProcessor.isPluginLoaded());
 
-    if (hostProcessor.isPluginLoaded())
-    {
+    if (hostProcessor.isPluginLoaded()) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
+                                        // we'll be dereferencing one of the elements of inner_ping_pong
+                                        // it's basically a null check (I think)                    just in case you aren't super familiar with unique_ptr,
+    {                                                                                                                   // the lambda is the deleter --original-picture
         auto editorComponent = std::make_unique<PluginEditorComponent> (hostProcessor.createInnerEditor(), [this]
         {
             [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([this] { clearPlugin(); });
-            jassert (posted);
+            jassert (posted); // lmao https://img.ifunny.co/images/80f17436f015abc60014c3603d81d6cf91a6912377fd10ea895e3533ce821a76_1.jpg
         });
 
         editorComponent->setScaleFactor (currentScaleFactor);
