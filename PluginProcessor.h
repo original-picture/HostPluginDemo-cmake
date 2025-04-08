@@ -64,6 +64,12 @@ public:
     void swap_active_inactive();
 
 
+    inline       std::unique_ptr<juce::AudioPluginInstance>& inactive_inner()       { return inner_ping_pong[!active_ping_pong_index_];  }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() const { return inner_ping_pong[!active_ping_pong_index_];  }
+
+    inline       std::unique_ptr<juce::AudioPluginInstance>& active_inner()         { return inner_ping_pong[active_ping_pong_index_]; }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& active_inner()   const { return inner_ping_pong[active_ping_pong_index_]; }
+
 private:
     juce::CriticalSection innerMutex; // I don't understand why this is necessary, because this mutex only ever gets locked on the message thread
                                       // maybe they were planning on locking it in processBlock() (on the audio thread), which would make sense functionally, because things like the inner plugin changing need to be synchronized
@@ -79,11 +85,7 @@ private:
                                                             // so instead I use unsigned char and flip it by atomically xoring it with 1
 
 
-    inline       std::unique_ptr<juce::AudioPluginInstance>& inactive_inner()       { return inner_ping_pong[!active_ping_pong_index_];  }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() const { return inner_ping_pong[!active_ping_pong_index_];  }
 
-    inline       std::unique_ptr<juce::AudioPluginInstance>& active_inner()         { return inner_ping_pong[active_ping_pong_index_]; }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& active_inner()   const { return inner_ping_pong[active_ping_pong_index_]; }
 
 
 

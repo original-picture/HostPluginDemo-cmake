@@ -106,8 +106,8 @@ void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& audio_buff
 }
 
 void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
-    const juce::ScopedLock sl (innerMutex);
-
+    const juce::ScopedLock sl (innerMutex); // FIXME there might be a data race here because this usually gets called from the message thread, but I'm accessing active_inner(), which belongs to the audio thread
+                                            //
     juce::XmlElement xml ("state");
 
     if(active_inner() != nullptr) {
@@ -116,8 +116,8 @@ void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
         xml.addChildElement (
             [this] {
                 juce::MemoryBlock innerState;
-                active_inner()->getStateInformation (innerState);
-
+                active_inner()->getStateInformation (innerState); // TODO: could just temporarily swap them so that i can work on active_inner()
+                                                                  // aaaggh but no that wouldn't work because processBlock could still be working on it 
                 auto stateNode = std::make_unique<juce::XmlElement> (innerStateTag);
                 stateNode->addTextElement (innerState.toBase64Encoding());
                 return stateNode.release();

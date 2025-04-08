@@ -133,12 +133,12 @@ void HostAudioProcessorEditor::setScaleFactor (float scale) {
 }
 
 void HostAudioProcessorEditor::pluginChanged() {
-    loader.setVisible (! hostProcessor.isPluginLoaded());
-    closeButton.setVisible (hostProcessor.isPluginLoaded());
+    //loader.setVisible (true);
+    closeButton.setVisible (hostProcessor.inactive_inner() != nullptr);
 
-    if (hostProcessor.isPluginLoaded()) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
-                                        // we'll be dereferencing one of the elements of inner_ping_pong
-                                        // it's basically a null check (I think)                    just in case you aren't super familiar with unique_ptr,
+    if (hostProcessor.inactive_inner() != nullptr) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
+                                                   // we'll be dereferencing one of the elements of inner_ping_pong
+                                                   // it's basically a null check (I think) --original-picture          // just in case you aren't super familiar with unique_ptr,
     {                                                                                                                   // the lambda is the deleter --original-picture
         auto editorComponent = std::make_unique<PluginEditorComponent> (hostProcessor.createInnerEditor(), [this]
         {
