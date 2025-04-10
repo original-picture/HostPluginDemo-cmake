@@ -134,9 +134,9 @@ void HostAudioProcessorEditor::setScaleFactor (float scale) {
 
 void HostAudioProcessorEditor::pluginChanged() {
     //loader.setVisible (true);
-    closeButton.setVisible (hostProcessor.inactive_inner() != nullptr);
+    closeButton.setVisible (hostProcessor.editor_write_inner() != nullptr);
 
-    if (hostProcessor.inactive_inner() != nullptr) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
+    if (hostProcessor.editor_write_inner() != nullptr) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
                                                    // we'll be dereferencing one of the elements of inner_ping_pong
                                                    // it's basically a null check (I think) --original-picture          // just in case you aren't super familiar with unique_ptr,
     {                                                                                                                   // the lambda is the deleter --original-picture
@@ -180,7 +180,7 @@ void HostAudioProcessorEditor::pluginChanged() {
 
    // this->currentEditorComponent = nullptr;
 
-    hostProcessor.swap_active_inactive();
+    hostProcessor.swap_read_write();
 }
 
 void HostAudioProcessorEditor::clearPlugin() {

@@ -61,14 +61,31 @@ public:
 
     void set_plugin_changed_flag();
 
-    void swap_active_inactive();
+    void swap_read_write();
 
 
-    inline       std::unique_ptr<juce::AudioPluginInstance>& inactive_inner()       { return inner_ping_pong[!active_ping_pong_index_];  }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& inactive_inner() const { return inner_ping_pong[!active_ping_pong_index_];  }
+    inline       std::unique_ptr<juce::AudioPluginInstance>& editor_write_inner()       { return inner_ping_pong[!active_ping_pong_index_];  }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& editor_write_inner() const { return inner_ping_pong[!active_ping_pong_index_];  }
 
-    inline       std::unique_ptr<juce::AudioPluginInstance>& active_inner()         { return inner_ping_pong[active_ping_pong_index_]; }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& active_inner()   const { return inner_ping_pong[active_ping_pong_index_]; }
+    inline       std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()         { return inner_ping_pong[active_ping_pong_index_]; }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()   const { return inner_ping_pong[active_ping_pong_index_]; }
+
+    /// this is all just ideas. I haven't hooked any of this up yet. So it might be completely wrong
+    std::atomic<bool> inside_process_block; // basically a spinlock
+    std::atomic<bool> plugin_already_changed_in_this_process_block_call; // this warrants some explanation
+                                                                         // Long story short, it's possible for swap_read_write to get called while processBlock is still using processor_read_inner()
+                                                                         // this isn't an issue on its own (doesn't cause a data race), because the usage of memory_order_release ensures that by the time the swapping atomic write is visible
+                                                                         // the new plugin is no longer being written to
+                                                                         // However, it does mean that, for the remainder of that process call, processBlock is technically reading old data
+                                                                         // again, on its own this doesn't cause a data race. But it does become an issue if another plugin gets loaded in that same processBlock call
+                                                                         // In that case, processBlock will be reading from editor_write_inner() while the editor is writing to it, causing a data race
+                                                                         // the solution I came up with for this issue is to set inside_process_block to true at the beginning of processBlock and false at the end,
+                                                                         // and set plugin_already_changed_in_this_process_block_call to true in swap_read_write and false also at the end of processBlock
+                                                                         // then, before trying to modify editor_write_inner(), the editor will check to see if(inside_process_block&&plugin_already_changed_in_this_process_block_call)
+                                                                         // and if it evaluates to true it will return from whatever function was being called without modifying editor_write_inner()
+                                                                         // I think this is an okay solution because I don't think it's physically possible for a user to interact with the gui fast enough to load multiple plugins within one processBlock call,
+                                                                         // (maybe it could happen if the gui freezes or something and a bunch of changes get reported to the processor at almost the same time)
+                                                                         // so this early out path will likely never be hit
 
 private:
     juce::CriticalSection innerMutex; // I don't understand why this is necessary, because this mutex only ever gets locked on the message thread

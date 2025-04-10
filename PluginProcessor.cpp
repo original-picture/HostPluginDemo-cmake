@@ -46,9 +46,9 @@ void HostAudioProcessorImpl::prepareToPlay (double sr, int bs) {
 
     active = true;
 
-    if (inactive_inner() != nullptr) { // TODO: do I need to do active_inner() here too? Also shouldn't I be setting the bus layout too?
-        inactive_inner()->setRateAndBufferSizeDetails (sr, bs);
-        inactive_inner()->prepareToPlay (sr, bs);
+    if (editor_write_inner() != nullptr) { // TODO: do I need to do processor_read_inner() here too? Also shouldn't I be setting the bus layout too?
+        editor_write_inner()->setRateAndBufferSizeDetails (sr, bs);
+        editor_write_inner()->prepareToPlay (sr, bs);
     }
 }
 
@@ -57,18 +57,18 @@ void HostAudioProcessorImpl::releaseResources() {
 
     active = false;
 
-    if (inactive_inner() != nullptr)
-        inactive_inner()->releaseResources();
+    if (editor_write_inner() != nullptr)
+        editor_write_inner()->releaseResources();
 
-    if (active_inner() != nullptr)
-        active_inner()->releaseResources();
+    if (processor_read_inner() != nullptr)
+        processor_read_inner()->releaseResources();
 }
 
 void HostAudioProcessorImpl::reset() {
     const juce::ScopedLock sl (innerMutex);
 
-    if (active_inner())
-        active_inner()->reset();
+    if (processor_read_inner())
+        processor_read_inner()->reset();
 }
 
 // In this example, we don't actually pass any audio through the inner processor.
@@ -106,18 +106,18 @@ void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& audio_buff
 }
 
 void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
-    const juce::ScopedLock sl (innerMutex); // FIXME there might be a data race here because this usually gets called from the message thread, but I'm accessing active_inner(), which belongs to the audio thread
+    const juce::ScopedLock sl (innerMutex); // FIXME there might be a data race here because this usually gets called from the message thread, but I'm accessing processor_read_inner(), which belongs to the audio thread
                                             //
     juce::XmlElement xml ("state");
 
-    if(active_inner() != nullptr) {
+    if(processor_read_inner() != nullptr) {
         xml.setAttribute (editorStyleTag, (int) editorStyle);
-        xml.addChildElement (active_inner()->getPluginDescription().createXml().release());
+        xml.addChildElement (processor_read_inner()->getPluginDescription().createXml().release());
         xml.addChildElement (
             [this] {
                 juce::MemoryBlock innerState;
-                active_inner()->getStateInformation (innerState); // TODO: could just temporarily swap them so that i can work on active_inner()
-                                                                  // aaaggh but no that wouldn't work because processBlock could still be working on it 
+                processor_read_inner()->getStateInformation (innerState); // TODO: could just temporarily swap them so that i can work on processor_read_inner()
+                                                                  // aaaggh but no that wouldn't work because processBlock could still be working on it
                 auto stateNode = std::make_unique<juce::XmlElement> (innerStateTag);
                 stateNode->addTextElement (innerState.toBase64Encoding());
                 return stateNode.release();
@@ -160,11 +160,11 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
             return;
         }
 
-        inactive_inner() = std::move (instance);
+        editor_write_inner() = std::move (instance);
         editorStyle = where;
 
-        if (inactive_inner() != nullptr && ! mb.isEmpty())
-            inactive_inner()->setStateInformation (mb.getData(), (int) mb.getSize());
+        if (editor_write_inner() != nullptr && ! mb.isEmpty())
+            editor_write_inner()->setStateInformation (mb.getData(), (int) mb.getSize());
 
         // In a 'real' plugin, we'd also need to set the bus configuration of the inner plugin.
         // One possibility would be to match the bus configuration of the wrapper plugin, but
@@ -182,19 +182,19 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
 
 
         if(active) { // I don't understand what active does --original-picture
-            if(!inactive_inner()->checkBusesLayoutSupported(getBusesLayout())) {
+            if(!editor_write_inner()->checkBusesLayoutSupported(getBusesLayout())) {
                 // this is called from the gui thread so it's okay --original-picture
                 juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
                                                        "Error!",
-                                                            "the plugin you're trying to load doesn't support the bus layout of the host plugin!",
-                                                            "okay ;_;");
+                                                       "the plugin you're trying to load doesn't support the bus layout of the host plugin!",
+                                                       "okay ;_;");
 
-                inactive_inner().reset();
+                editor_write_inner().reset();
             }
             else {
-                jassert(inactive_inner()->setBusesLayout(getBusesLayout()));
-                inactive_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
-                inactive_inner()->prepareToPlay (getSampleRate(), getBlockSize());
+                jassert(editor_write_inner()->setBusesLayout(getBusesLayout()));
+                editor_write_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
+                editor_write_inner()->prepareToPlay (getSampleRate(), getBlockSize());
 
                 juce::NullCheckedInvocation::invoke (pluginChanged); // I moved this up here and I can't remember why lol
             }                                                           // I've tested both versions and they seem to do the same thing,
@@ -209,19 +209,18 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
 void HostAudioProcessorImpl::clearPlugin() {
     const juce::ScopedLock sl (innerMutex);
 
-    inactive_inner() = nullptr; // TODO: shouldn't this be active_inner?
+    editor_write_inner() = nullptr; // TODO: shouldn't this be processor_read_inner?
     juce::NullCheckedInvocation::invoke (pluginChanged);
 }
 
 bool HostAudioProcessorImpl::isPluginLoaded() const {
     const juce::ScopedLock sl (innerMutex);
-    return active_inner() != nullptr;
+    return processor_read_inner() != nullptr;
 }
 
 std::unique_ptr<juce::AudioProcessorEditor> HostAudioProcessorImpl::createInnerEditor() const {
     const juce::ScopedLock sl (innerMutex);
-    return rawToUniquePtr (inactive_inner()->hasEditor() ? inactive_inner()->createEditorIfNeeded() : nullptr);
-    // changing this line from using active_inner() to using inactive_inner() got rid of the double load bug, but now this line segfaults when you close a plugin
+    return rawToUniquePtr (editor_write_inner()->hasEditor() ? editor_write_inner()->createEditorIfNeeded() : nullptr);
 }
 
 void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* source) {
@@ -235,11 +234,11 @@ void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* so
     }
 }
 
-void HostAudioProcessorImpl::swap_active_inactive() {
+void HostAudioProcessorImpl::swap_read_write() {
                                               // xoring with 1 is equivalent to boolean negation
     active_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
 
-    //inactive_inner().reset();
+    //editor_write_inner().reset();
 }
 
 
