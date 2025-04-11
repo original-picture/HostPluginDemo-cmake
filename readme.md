@@ -24,11 +24,12 @@ cmake --build .
 - [x] after close plugin is clicked, the plugin closes but another "close plugin" button shows up in the host plugin window that needs to be clicked before the user can return to the plugin list
 - [ ] mysterious freeze on plugin load
 - [ ] JUCE assert fails when `HostPluginDemo-cmake` is hosting itself and the user presses the outermost  close button
+- [ ] The behavior of the UI button in Reaper is confusing. It will sometimes reopen a closed inner plugin and doesn't seem to reopen an inner plugin that *was* open
 
 ## Todo
 - [x] actually have the hosted plugin do the audio processing
 - [x] add an error dialog box if something goes wrong when trying to load a plugin 
-- [ ] parameter forwarding 
+- [x] parameter forwarding 
 - [ ] be more flexible about supporting different bus layouts
 - [ ] add a data loss warning when closing a plugin? Or maybe just use a unique save file for every plugin so nothing gets lost?
 

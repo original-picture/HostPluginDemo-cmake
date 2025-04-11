@@ -23,7 +23,7 @@ float forwarding_parameter_ptr::getValue() const {
     }
 }
 
-void forwarding_parameter_ptr::set_forwarded_parameter(juce::HostedAudioProcessorParameter* parameter_to_forward) {
+void forwarding_parameter_ptr::set_forwarded_parameter(juce::AudioProcessorParameter* parameter_to_forward) {
     forwarded_parameter_ = parameter_to_forward;
 }
 

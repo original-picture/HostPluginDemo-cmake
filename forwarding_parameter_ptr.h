@@ -5,16 +5,16 @@
 
 /**
  *  this is a simple helper class that is used to forward parameters from the inner plugin to the outer plugin
- *  It holds a pointer to a HostedAudioProcessorParameter and forwards all its virtual member functions inherited from juce::AudioProcessorParameter
+ *  It holds a pointer to a AudioProcessorParameter and forwards all its virtual member functions inherited from juce::AudioProcessorParameter
  *  to this pointer
  *  an object of this type can be empty (the internal pointer is null). In this case, all of the virtual member functions will return default values
  *
  *  thanks to eyalamir from the juce forums for giving me this idea https://forum.juce.com/t/forwarding-the-parameters-of-a-hosted-plugin/65751/2?u=original-picture
  */
 class forwarding_parameter_ptr : public juce::AudioProcessorParameter {
-    juce::HostedAudioProcessorParameter* forwarded_parameter_ = nullptr;
-    juce::String placeholder_name_;
-
+    juce::AudioProcessorParameter* forwarded_parameter_ = nullptr; // I was using HostedAudioProcessorParameter here, but that didn't work with the AudioPluginInstance in the processor,
+    juce::String placeholder_name_;                                // because the getParameters member function of AudioPluginInstance return an array of AudioProcessorParameter, not HostedAudioProcessorParameter
+                                                                   // idk maybe this is a sign that I should be doing something differently
 public:
     /// placeholder_name is a string to use if this object points to a parameter (is not null)
     forwarding_parameter_ptr(const juce::String& placeholder_name);
@@ -24,7 +24,7 @@ public:
 
     static forwarding_parameter_ptr create_with_placeholder_name_from_index(unsigned parameter_index);
 
-    void set_forwarded_parameter(juce::HostedAudioProcessorParameter* parameter_to_forward);
+    void set_forwarded_parameter(juce::AudioProcessorParameter* parameter_to_forward);
 
     /// returns true if this object points to a parameter (is not null)
     operator bool() const;

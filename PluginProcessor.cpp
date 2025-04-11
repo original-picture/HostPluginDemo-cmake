@@ -201,6 +201,30 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
                 editor_write_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
                 editor_write_inner()->prepareToPlay (getSampleRate(), getBlockSize());
 
+                for(unsigned outer_parameter_i = 0; outer_parameter_i < maximum_number_of_parameters_; ++outer_parameter_i) {
+                    parameters_[outer_parameter_i]->set_forwarded_parameter(nullptr);
+                }
+
+                unsigned inner_plugin_parameter_count = editor_write_inner()->getParameters().size(),
+                         number_of_parameters;
+
+                if(editor_write_inner()->getParameters().size() > maximum_number_of_parameters_) {
+                    number_of_parameters = maximum_number_of_parameters_;
+                    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,
+                                                           "Warning!",
+                                                           "The plugin you're trying to load has more parameters than the hardcoded maximum of the host plugin (" + juce::String(inner_plugin_parameter_count) + " vs " + juce::String(maximum_number_of_parameters_) + ")! The plugin can still be used, but the last " + juce::String(inner_plugin_parameter_count - maximum_number_of_parameters_) + " will be inaccessible from your DAW!",
+                                                           "okay ;_;");
+                }
+                else {
+                    number_of_parameters = inner_plugin_parameter_count;
+                }
+
+                for(unsigned inner_parameter_i = 0; inner_parameter_i < number_of_parameters; ++inner_parameter_i) {
+                    parameters_[inner_parameter_i]->set_forwarded_parameter(editor_write_inner()->getParameters()[inner_parameter_i]);
+                }
+
+                updateHostDisplay();
+
                 juce::NullCheckedInvocation::invoke (pluginChanged); // I moved this up here and I can't remember why lol
             }                                                           // I've tested both versions and they seem to do the same thing,
         }                                                               // but that could be because any difference in behavior is masked by the double-load bug --original-picture
@@ -213,6 +237,11 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
 
 void HostAudioProcessorImpl::clearPlugin() {
     const juce::ScopedLock sl (innerMutex);
+
+    for(unsigned outer_parameter_i = 0; outer_parameter_i < maximum_number_of_parameters_; ++outer_parameter_i) {
+        parameters_[outer_parameter_i]->set_forwarded_parameter(nullptr);
+    }
+    updateHostDisplay();
 
     editor_write_inner() = nullptr; // TODO: shouldn't this be processor_read_inner?
     juce::NullCheckedInvocation::invoke (pluginChanged);
