@@ -26,6 +26,11 @@ HostAudioProcessorImpl::HostAudioProcessorImpl()
 
     juce::MessageManagerLock lock;
     pluginList.addChangeListener (this);
+
+    for(unsigned i = 0; i < maximum_number_of_parameters_; ++i) {
+        parameters_.emplace_back(new forwarding_parameter_ptr(i));
+        addParameter(parameters_[i]);
+    }
 }
 
 bool HostAudioProcessorImpl::isBusesLayoutSupported (const BusesLayout& layouts) const  {
@@ -106,7 +111,7 @@ void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& audio_buff
 }
 
 void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
-    const juce::ScopedLock sl (innerMutex); // FIXME there might be a data race here because this usually gets called from the message thread, but I'm accessing processor_read_inner(), which belongs to the audio thread
+    const juce::ScopedLock sl (innerMutex); // FIXME there's a data race here because this usually gets called from the message thread, but I'm accessing processor_read_inner(), which belongs to the audio thread
                                             //
     juce::XmlElement xml ("state");
 
@@ -237,8 +242,6 @@ void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* so
 void HostAudioProcessorImpl::swap_read_write() {
                                               // xoring with 1 is equivalent to boolean negation
     active_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
-
-    //editor_write_inner().reset();
 }
 
 

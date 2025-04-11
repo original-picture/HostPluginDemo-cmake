@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "forwarding_parameter_ptr.h"
 
 //using namespace juce;
 
@@ -102,7 +103,9 @@ private:
                                                             // so instead I use unsigned char and flip it by atomically xoring it with 1
 
 
+    static constexpr std::size_t maximum_number_of_parameters_ = 64;
 
+    std::vector<forwarding_parameter_ptr*> parameters_;
 
 
 

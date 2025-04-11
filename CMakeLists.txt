@@ -77,6 +77,8 @@ target_sources(HostPluginDemo-cmake
                PRIVATE
                PluginEditor.cpp
                PluginProcessor.cpp
+
+        forwarding_parameter_ptr.cpp
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer
