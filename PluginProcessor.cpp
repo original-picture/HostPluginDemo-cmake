@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 
-HostAudioProcessorImpl::HostAudioProcessorImpl()
+HostAudioProcessor::HostAudioProcessor()
         : AudioProcessor (BusesProperties().withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                                   .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
 {
@@ -33,7 +33,7 @@ HostAudioProcessorImpl::HostAudioProcessorImpl()
     }
 }
 
-bool HostAudioProcessorImpl::isBusesLayoutSupported (const BusesLayout& layouts) const  {
+bool HostAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const  {
     const auto& mainOutput = layouts.getMainOutputChannelSet();
     const auto& mainInput  = layouts.getMainInputChannelSet();
     
@@ -46,7 +46,7 @@ bool HostAudioProcessorImpl::isBusesLayoutSupported (const BusesLayout& layouts)
     return true;
 }
 
-void HostAudioProcessorImpl::prepareToPlay (double sr, int bs) {
+void HostAudioProcessor::prepareToPlay (double sr, int bs) {
     const juce::ScopedLock sl (innerMutex);
 
     active = true;
@@ -57,7 +57,7 @@ void HostAudioProcessorImpl::prepareToPlay (double sr, int bs) {
     }
 }
 
-void HostAudioProcessorImpl::releaseResources() {
+void HostAudioProcessor::releaseResources() {
     const juce::ScopedLock sl (innerMutex);
 
     active = false;
@@ -69,7 +69,7 @@ void HostAudioProcessorImpl::releaseResources() {
         processor_read_inner()->releaseResources();
 }
 
-void HostAudioProcessorImpl::reset() {
+void HostAudioProcessor::reset() {
     const juce::ScopedLock sl (innerMutex);
 
     if (processor_read_inner())
@@ -79,7 +79,7 @@ void HostAudioProcessorImpl::reset() {
 // In this example, we don't actually pass any audio through the inner processor.
 // In a 'real' plugin, we'd need to add some synchronisation to ensure that the inner
 // plugin instance was never modified (deleted, replaced etc.) during a call to processBlock.
-void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<float>& audio_buffer, juce::MidiBuffer& midi_buffer) {
+void HostAudioProcessor::processBlock (juce::AudioBuffer<float>& audio_buffer, juce::MidiBuffer& midi_buffer) {
     jassert (! isUsingDoublePrecision());
 
     bool current_inner_index = active_ping_pong_index_;
@@ -99,7 +99,7 @@ void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<float>& audio_buffe
     }*/
 }
 
-void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& audio_buffer, juce::MidiBuffer& midi_buffer) {
+void HostAudioProcessor::processBlock (juce::AudioBuffer<double>& audio_buffer, juce::MidiBuffer& midi_buffer) {
     jassert (! isUsingDoublePrecision());
 
     bool current_inner_index = active_ping_pong_index_;
@@ -110,7 +110,7 @@ void HostAudioProcessorImpl::processBlock (juce::AudioBuffer<double>& audio_buff
     }
 }
 
-void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
+void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
     const juce::ScopedLock sl (innerMutex); // FIXME there's a data race here because this usually gets called from the message thread, but I'm accessing processor_read_inner(), which belongs to the audio thread
                                             //
     juce::XmlElement xml ("state");
@@ -133,7 +133,7 @@ void HostAudioProcessorImpl::getStateInformation (juce::MemoryBlock& destData) {
     destData.replaceAll (text.toRawUTF8(), text.getNumBytesAsUTF8());
 }
 
-void HostAudioProcessorImpl::setStateInformation (const void* data, int sizeInBytes) {
+void HostAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
     const juce::ScopedLock sl (innerMutex);
 
     auto xml = juce::XmlDocument::parse (juce::String (juce::CharPointer_UTF8 (static_cast<const char*> (data)), (size_t) sizeInBytes));
@@ -151,7 +151,7 @@ void HostAudioProcessorImpl::setStateInformation (const void* data, int sizeInBy
     }
 }
 
-void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, EditorStyle where, const juce::MemoryBlock& mb) {
+void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorStyle where, const juce::MemoryBlock& mb) {
     const juce::ScopedLock sl (innerMutex);
 
     const auto callback = [this, where, mb] (std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& error)
@@ -235,7 +235,7 @@ void HostAudioProcessorImpl::setNewPlugin(const juce::PluginDescription& pd, Edi
     pluginFormatManager.createPluginInstanceAsync (pd, getSampleRate(), getBlockSize(), callback);
 }
 
-void HostAudioProcessorImpl::clearPlugin() {
+void HostAudioProcessor::clearPlugin() {
     const juce::ScopedLock sl (innerMutex);
 
     for(unsigned outer_parameter_i = 0; outer_parameter_i < maximum_number_of_parameters_; ++outer_parameter_i) {
@@ -247,17 +247,17 @@ void HostAudioProcessorImpl::clearPlugin() {
     juce::NullCheckedInvocation::invoke (pluginChanged);
 }
 
-bool HostAudioProcessorImpl::isPluginLoaded() const {
+bool HostAudioProcessor::isPluginLoaded() const {
     const juce::ScopedLock sl (innerMutex);
     return processor_read_inner() != nullptr;
 }
 
-std::unique_ptr<juce::AudioProcessorEditor> HostAudioProcessorImpl::createInnerEditor() const {
+std::unique_ptr<juce::AudioProcessorEditor> HostAudioProcessor::createInnerEditor() const {
     const juce::ScopedLock sl (innerMutex);
     return rawToUniquePtr (editor_write_inner()->hasEditor() ? editor_write_inner()->createEditorIfNeeded() : nullptr);
 }
 
-void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* source) {
+void HostAudioProcessor::changeListenerCallback (juce::ChangeBroadcaster* source) {
     if(source != &pluginList) {
         return;
     }
@@ -268,12 +268,10 @@ void HostAudioProcessorImpl::changeListenerCallback (juce::ChangeBroadcaster* so
     }
 }
 
-void HostAudioProcessorImpl::swap_read_write() {
+void HostAudioProcessor::swap_read_write() {
                                               // xoring with 1 is equivalent to boolean negation
     active_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
 }
-
-
 
 
 

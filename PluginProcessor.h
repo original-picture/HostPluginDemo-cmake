@@ -11,11 +11,11 @@ enum class EditorStyle { thisWindow, newWindow };
 class HostAudioProcessorEditor;
 
 //==============================================================================
-class HostAudioProcessorImpl : public  juce::AudioProcessor,
+class HostAudioProcessor : public  juce::AudioProcessor,
                                private juce::ChangeListener
 {
 public:
-    HostAudioProcessorImpl();
+    HostAudioProcessor();
 
     bool isBusesLayoutSupported (const BusesLayout& layouts) const final;
     void prepareToPlay (double sr, int bs) final;
@@ -29,8 +29,8 @@ public:
 
     void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) final;
 
-    inline bool hasEditor() const override                                   { return false; }
-    inline juce::AudioProcessorEditor* createEditor() override                     { return nullptr; }
+    inline bool hasEditor() const override                                   { return true; }
+    inline juce::AudioProcessorEditor* createEditor() override;
 
     inline const juce::String getName() const final                                { return "HostPluginDemo-cmake"; }
     inline bool acceptsMidi() const final                                    { return true; }
@@ -117,11 +117,4 @@ private:
     static constexpr const char* editorStyleTag = "editor_style";
 
     void changeListenerCallback (juce::ChangeBroadcaster* source) final;
-};
-
-class HostAudioProcessor final : public HostAudioProcessorImpl
-{
-public:
-    bool hasEditor() const override { return true; }
-    juce::AudioProcessorEditor* createEditor() override;
 };

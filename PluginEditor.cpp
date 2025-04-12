@@ -77,7 +77,7 @@ ScaledDocumentWindow::ScaledDocumentWindow(juce::Colour bg, float scale) : Docum
 
 
 
-HostAudioProcessorEditor::HostAudioProcessorEditor(HostAudioProcessorImpl& owner)   : AudioProcessorEditor (owner),
+HostAudioProcessorEditor::HostAudioProcessorEditor(HostAudioProcessor& owner)   : AudioProcessorEditor (owner),
                                                                                       hostProcessor (owner),
                                                                                       loader (owner.pluginFormatManager,
                                                                                               owner.pluginList,

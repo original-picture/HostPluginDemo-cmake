@@ -109,7 +109,7 @@ private:
 class HostAudioProcessorEditor final : public juce::AudioProcessorEditor
 {
 public:
-    explicit HostAudioProcessorEditor (HostAudioProcessorImpl& owner);
+    explicit HostAudioProcessorEditor (HostAudioProcessor& owner);
     void paint (juce::Graphics& g) override;
     void resized() override;
     void childBoundsChanged (Component* child) override;
@@ -122,11 +122,11 @@ private:
 
     static constexpr auto buttonHeight = 30;
 
-    HostAudioProcessorImpl& hostProcessor;
+    HostAudioProcessor& hostProcessor;
     PluginLoaderComponent loader;
     std::unique_ptr<Component> editor;
     PluginEditorComponent* currentEditorComponent = nullptr;
     juce::ScopedValueSetter<std::function<void()>> scopedCallback; // a ScopedValueSetter is used here in order to automatically
-    juce::TextButton closeButton { "Close Plugin" };    // reset the processor's pluginChanged callback to null if the editor gets destroyed
+    juce::TextButton closeButton { "Close Plugin" };               // reset the processor's pluginChanged callback to null if the editor gets destroyed
     float currentScaleFactor = 1.0f;                               // the processor then uses juce::NullCheckedInvocation::invoke()
 };                                                                 // in order to avoid calling HostAudioProcessorEditor::pluginChanged() with a dangling this pointer --original-picture
