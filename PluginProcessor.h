@@ -12,7 +12,7 @@ class HostAudioProcessorEditor;
 
 //==============================================================================
 class HostAudioProcessor : public  juce::AudioProcessor,
-                               private juce::ChangeListener
+                           private juce::ChangeListener
 {
 public:
     HostAudioProcessor();
@@ -29,19 +29,19 @@ public:
 
     void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) final;
 
-    inline bool hasEditor() const override                                   { return true; }
+    inline bool hasEditor() const override                         { return true; }
     inline juce::AudioProcessorEditor* createEditor() override;
 
-    inline const juce::String getName() const final                                { return "HostPluginDemo-cmake"; }
-    inline bool acceptsMidi() const final                                    { return true; }
-    inline bool producesMidi() const final                                   { return true; }
-    inline double getTailLengthSeconds() const final                         { return 0.0; }
+    inline const juce::String getName() const final                { return "HostPluginDemo-cmake"; }
+    inline bool acceptsMidi() const final                          { return true; }
+    inline bool producesMidi() const final                         { return true; }
+    inline double getTailLengthSeconds() const final               { return 0.0; }
 
-    inline int getNumPrograms() final                                        { return 0; }
-    inline int getCurrentProgram() final                                     { return 0; }
-    inline void setCurrentProgram (int) final                                {}
-    inline const juce::String getProgramName (int) final                           { return "None"; }
-    inline void changeProgramName (int, const juce::String&) final                 {}
+    inline int getNumPrograms() final                              { return 0; }
+    inline int getCurrentProgram() final                           { return 0; }
+    inline void setCurrentProgram (int) final                      {}
+    inline const juce::String getProgramName (int) final           { return "None"; }
+    inline void changeProgramName (int, const juce::String&) final {}
 
     void getStateInformation (juce::MemoryBlock& destData) final;
     void setStateInformation (const void* data, int sizeInBytes) final;
@@ -65,11 +65,11 @@ public:
     void swap_read_write();
 
 
-    inline       std::unique_ptr<juce::AudioPluginInstance>& editor_write_inner()       { return inner_ping_pong[!active_ping_pong_index_];  }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& editor_write_inner() const { return inner_ping_pong[!active_ping_pong_index_];  }
+    inline       std::unique_ptr<juce::AudioPluginInstance>& editor_write_inner()       { return inner_ping_pong[!processor_read_ping_pong_index_];  }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& editor_write_inner() const { return inner_ping_pong[!processor_read_ping_pong_index_];  }
 
-    inline       std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()         { return inner_ping_pong[active_ping_pong_index_]; }
-    inline const std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()   const { return inner_ping_pong[active_ping_pong_index_]; }
+    inline       std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()         { return inner_ping_pong[processor_read_ping_pong_index_]; }
+    inline const std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()   const { return inner_ping_pong[processor_read_ping_pong_index_]; }
 
     /// this is all just ideas. I haven't hooked any of this up yet. So it might be completely wrong
     std::atomic<bool> inside_process_block; // basically a spinlock
@@ -89,20 +89,22 @@ public:
                                                                          // so this early out path will likely never be hit
 
 private:
-    juce::CriticalSection innerMutex; // I don't understand why this is necessary, because this mutex only ever gets locked on the message thread
+    juce::CriticalSection innerMutex; // I don't understand why this is necessary, because afaict this mutex only ever gets locked on the message thread
                                       // maybe they were planning on locking it in processBlock() (on the audio thread), which would make sense functionally, because things like the inner plugin changing need to be synchronized
                                       // but mutexes really shouldn't be used on the audio thread to begin with, so idk --original-picture
 
-    //std::unique_ptr<juce::AudioPluginInstance> inner;
     std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2] = {nullptr, nullptr}; // my lock-free solution for synchronizing plugin changes is to hold two AudioPluginInstances and ping pong between them using an atomic index
-                                                                                                // that one plugin can be getting loaded on the message thread while the other is being used on the audio thread and they don't mess with each other's data
-                                                                                                // --original-picture
+                                                                                        // so that one plugin can be getting loaded on the message thread while the other is being used on the audio thread without either messing with the other's data
+                                                                                        // --original-picture
 
-    std::atomic<unsigned char> active_ping_pong_index_ = 0; // I would have used a bool for this variable (because the index can only ever be 0 or 1),
-                                                            // but I need to atomically flip it and std::atomic<bool> has no atomic negation operation
-                                                            // so instead I use unsigned char and flip it by atomically xoring it with 1
+    //std::unique_ptr<juce::AudioPluginInstance> inner; // this is how it looked in the original HostPluginDemo --original-picture
+
+    std::atomic<unsigned char> processor_read_ping_pong_index_ = 0; // I would have used a bool for this variable (because the index can only ever be 0 or 1),
+                                                                    // but I need to atomically flip it and std::atomic<bool> has no atomic negation operation
+                                                                    // so instead I use unsigned char and flip it by atomically xoring it with 1
 
 
+    // arbitrary limit --original-picture
     static constexpr std::size_t maximum_number_of_parameters_ = 64;
 
     std::vector<forwarding_parameter_ptr*> parameters_;

@@ -26,7 +26,8 @@ public:
 
         // this is a lambda that returns a lambda that calls a lambda lol
         // the outermost lambda is used to select the EditorStyle
-        // the lambda one layer in is used to
+        // the lambda one layer in gathers the information it needs to call callback, the innermost lambdas
+        // --original-picture
         const auto getCallback = [this, &list, cb = std::forward<Callback> (callback)] (EditorStyle style)
         {
             return [this, &list, cb, style]
@@ -42,9 +43,6 @@ public:
 
         buttons.thisWindowButton.onClick = getCallback (EditorStyle::thisWindow);
         buttons.newWindowButton .onClick = getCallback (EditorStyle::newWindow);
-                                     // stupid dumb poltergeist type
-        //juce::VST3PluginFormat vst3_plugin_format;
-        //pluginListComponent.scanFor(vst3_plugin_format);
     }
 
     void resized() override;
@@ -86,6 +84,8 @@ public:
     void resized() override;
     void childBoundsChanged (juce::Component* child) override;
 
+    ~PluginEditorComponent();
+
 private:
     static constexpr auto buttonHeight = 40;
 
@@ -119,6 +119,7 @@ private:
     void pluginChanged();
     void clearPlugin();
 
+    ~HostAudioProcessorEditor() override;
 
     static constexpr auto buttonHeight = 30;
 

@@ -70,6 +70,10 @@ void PluginEditorComponent::childBoundsChanged (Component* child) {
     setSize (size.getWidth(), margin + buttonHeight + size.getHeight());
 }
 
+PluginEditorComponent::~PluginEditorComponent() {
+
+}
+
 
 ScaledDocumentWindow::ScaledDocumentWindow(juce::Colour bg, float scale) : DocumentWindow ("Editor", bg, 0), desktopScale (scale) {}
 
@@ -187,4 +191,8 @@ void HostAudioProcessorEditor::clearPlugin() {
     currentEditorComponent = nullptr;
     editor = nullptr;
     hostProcessor.clearPlugin();
+}
+
+HostAudioProcessorEditor::~HostAudioProcessorEditor() {
+
 }

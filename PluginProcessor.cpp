@@ -4,7 +4,7 @@
 
 HostAudioProcessor::HostAudioProcessor()
         : AudioProcessor (BusesProperties().withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                                  .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+                                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
 {
     appProperties.setStorageParameters ([&]
                                         {
@@ -82,7 +82,7 @@ void HostAudioProcessor::reset() {
 void HostAudioProcessor::processBlock (juce::AudioBuffer<float>& audio_buffer, juce::MidiBuffer& midi_buffer) {
     jassert (! isUsingDoublePrecision());
 
-    bool current_inner_index = active_ping_pong_index_;
+    bool current_inner_index = processor_read_ping_pong_index_;
 
     auto& inner = inner_ping_pong[current_inner_index];
     if(inner) {
@@ -102,7 +102,7 @@ void HostAudioProcessor::processBlock (juce::AudioBuffer<float>& audio_buffer, j
 void HostAudioProcessor::processBlock (juce::AudioBuffer<double>& audio_buffer, juce::MidiBuffer& midi_buffer) {
     jassert (! isUsingDoublePrecision());
 
-    bool current_inner_index = active_ping_pong_index_;
+    bool current_inner_index = processor_read_ping_pong_index_;
 
     auto& inner = inner_ping_pong[current_inner_index];
     if(inner) {
@@ -112,7 +112,7 @@ void HostAudioProcessor::processBlock (juce::AudioBuffer<double>& audio_buffer, 
 
 void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
     const juce::ScopedLock sl (innerMutex); // FIXME there's a data race here because this usually gets called from the message thread, but I'm accessing processor_read_inner(), which belongs to the audio thread
-                                            //
+                                            // --original-picture
     juce::XmlElement xml ("state");
 
     if(processor_read_inner() != nullptr) {
@@ -122,7 +122,7 @@ void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
             [this] {
                 juce::MemoryBlock innerState;
                 processor_read_inner()->getStateInformation (innerState); // TODO: could just temporarily swap them so that i can work on processor_read_inner()
-                                                                  // aaaggh but no that wouldn't work because processBlock could still be working on it
+                                                                  // aaaggh but no that wouldn't work because processBlock could still be working on it   --original-picture
                 auto stateNode = std::make_unique<juce::XmlElement> (innerStateTag);
                 stateNode->addTextElement (innerState.toBase64Encoding());
                 return stateNode.release();
@@ -146,8 +146,8 @@ void HostAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         innerState.fromBase64Encoding (xml->getChildElementAllSubText (innerStateTag, {}));
 
         setNewPlugin (pd,
-        (EditorStyle) xml->getIntAttribute (editorStyleTag, 0),
-        innerState);
+                      (EditorStyle) xml->getIntAttribute (editorStyleTag, 0),
+                      innerState);
     }
 }
 
@@ -270,7 +270,7 @@ void HostAudioProcessor::changeListenerCallback (juce::ChangeBroadcaster* source
 
 void HostAudioProcessor::swap_read_write() {
                                               // xoring with 1 is equivalent to boolean negation
-    active_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
+    processor_read_ping_pong_index_.fetch_xor(1, std::memory_order_release); // use release because we need to make sure that all of our pointers have been set by the time the audio thread sees the new value of this variable
 }
 
 

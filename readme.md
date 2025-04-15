@@ -19,12 +19,20 @@ cmake --build .
 
 - [x] for some reason you have to click the open plugin button twice in order for it to work. 
   And then when you close the plugin, another one will pop up and you'll have to close that one too  
-  Most likely an issue with the ping-ponging system
-- [x] segfault when closing a plugin
+  - Most likely an issue with the ping-ponging system
+- [x] segfault when closing a plugin 
 - [x] after close plugin is clicked, the plugin closes but another "close plugin" button shows up in the host plugin window that needs to be clicked before the user can return to the plugin list
 - [ ] mysterious freeze on plugin load
-- [ ] JUCE assert fails when `HostPluginDemo-cmake` is hosting itself and the user presses the outermost  close button
-- [ ] The behavior of the UI button in Reaper is confusing. It will sometimes reopen a closed inner plugin and doesn't seem to reopen an inner plugin that *was* open
+- [ ] JUCE assert fails when `HostPluginDemo-cmake` is hosting itself and the user presses the outermost close button
+- [ ] The behavior of the UI button in Reaper is confusing. It will sometimes reopen a closed inner plugin editor and doesn't seem to reopen an inner plugin editor that *was* open
+  - after doing more testing, I've realized that this behavior isn't random. It oscillates between opening the editor and not opening the editor
+  - interestingly, this behavior doesn't occur when closing and reopening the entire DAW
+    - perhaps there's a way to exploit this and achieve the same behavior without having to add a bunch of manual checks  
+  - also if you disable and then re-enable the gui with an inner plugin that has no editor, the gui of the last loaded plugin that *did* have an editor will open instead
+- [ ] changes made in the inner plugin's editor don't seem to mark the project as "dirty" in reaper, meaning reaper will close without an unsaved work dialog, and any changes made to the inner plugin will be lost
+  - note that everything is saved and restored correctly if the user manually saves the reaper project
+  - [apparently this is an issue with juce/the underlying plugin libraries](https://forum.juce.com/t/how-the-plugin-can-tell-to-the-host-the-project-state-became-dirty/33830/20)
+    - I'll probably have to add a dummy parameter
 
 ## Todo
 - [x] actually have the hosted plugin do the audio processing
@@ -32,7 +40,12 @@ cmake --build .
 - [x] parameter forwarding 
 - [ ] be more flexible about supporting different bus layouts
 - [ ] add a data loss warning when closing a plugin? Or maybe just use a unique save file for every plugin so nothing gets lost?
-
+- [ ] give `forwarding_parameter_ptr` the ability to take a `get_name_string` callback that take in the original name string and outputs some other name string
+  - would be useful for creating parameter "namespaces"
+    - `gain_plugin_instance_0.gain`
+    - `gain_plugin_instance_1.gain`
+    - etc.
+- [ ] suppress warnings that should only show up when a plugin is first loaded when a plugin is reloaded (e.g., because the DAW was closed and reopened)
 
 ## Code style
 The code contains a mix of `camelCase` and `snake_case`. all of JUCE's code uses `camelCase` so I use `snake_case` to make it clear which parts are written by me  
