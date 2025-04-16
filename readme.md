@@ -22,6 +22,13 @@ cmake --build .
   - Most likely an issue with the ping-ponging system
 - [x] segfault when closing a plugin 
 - [x] after close plugin is clicked, the plugin closes but another "close plugin" button shows up in the host plugin window that needs to be clicked before the user can return to the plugin list
+- [x] changes made in the inner plugin's editor don't seem to mark the project as "dirty" in reaper, meaning reaper will close without an unsaved work dialog, and any changes made to the inner plugin will be lost
+- note that everything is saved and restored correctly if the user manually saves the reaper project
+- [apparently this is an issue with juce/the underlying plugin libraries](https://forum.juce.com/t/how-the-plugin-can-tell-to-the-host-the-project-state-became-dirty/33830/20)
+  - I'll probably have to add a dummy parameter
+- interestingly though, the project isn't marked as dirty even if the outer plugin's parameters have visibly changed
+  - I think I'm missing a call to `setValueNotifyingHost()`
+    - will probably have to use change listeners here
 - [ ] mysterious freeze on plugin load
 - [ ] JUCE assert fails when `HostPluginDemo-cmake` is hosting itself and the user presses the outermost close button
 - [ ] The behavior of the UI button in Reaper is confusing. It will sometimes reopen a closed inner plugin editor and doesn't seem to reopen an inner plugin editor that *was* open
@@ -29,10 +36,6 @@ cmake --build .
   - interestingly, this behavior doesn't occur when closing and reopening the entire DAW
     - perhaps there's a way to exploit this and achieve the same behavior without having to add a bunch of manual checks  
   - also if you disable and then re-enable the gui with an inner plugin that has no editor, the gui of the last loaded plugin that *did* have an editor will open instead
-- [ ] changes made in the inner plugin's editor don't seem to mark the project as "dirty" in reaper, meaning reaper will close without an unsaved work dialog, and any changes made to the inner plugin will be lost
-  - note that everything is saved and restored correctly if the user manually saves the reaper project
-  - [apparently this is an issue with juce/the underlying plugin libraries](https://forum.juce.com/t/how-the-plugin-can-tell-to-the-host-the-project-state-became-dirty/33830/20)
-    - I'll probably have to add a dummy parameter
 
 ## Todo
 - [x] actually have the hosted plugin do the audio processing

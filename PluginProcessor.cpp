@@ -27,6 +27,7 @@ HostAudioProcessor::HostAudioProcessor()
     juce::MessageManagerLock lock;
     pluginList.addChangeListener (this);
 
+    // TODO: reserve
     for(unsigned i = 0; i < maximum_number_of_parameters_; ++i) {
         parameters_.emplace_back(new forwarding_parameter_ptr(i));
         addParameter(parameters_[i]);

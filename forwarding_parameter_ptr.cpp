@@ -1,6 +1,16 @@
 
 #include "forwarding_parameter_ptr.h"
 
+/// this file and forwarding_parameter_ptr.cpp were written by me (original-picture), not the juce people
+
+void forwarding_parameter_ptr::parameterValueChanged (int parameterIndex, float newValue) {
+    setValueNotifyingHost(newValue); // we have to do this, otherwise the DAW won't realize that the inner parameter has changed and could potentially allow the user to close their project without prompting them to save!
+}
+
+// this member function is pure virtual in juce::AudioProcessorParameter::Listener, so we have to override it and have it do nothing
+void forwarding_parameter_ptr::parameterGestureChanged(int parameterIndex, bool gestureIsStarting) {}
+
+
 forwarding_parameter_ptr::forwarding_parameter_ptr(const juce::String& placeholder_name) : placeholder_name_(placeholder_name) {}
 
 forwarding_parameter_ptr::forwarding_parameter_ptr(unsigned int parameter_index) : placeholder_name_("Unused parameter " + juce::String(parameter_index)) {}
@@ -8,6 +18,14 @@ forwarding_parameter_ptr::forwarding_parameter_ptr(unsigned int parameter_index)
 forwarding_parameter_ptr forwarding_parameter_ptr::create_with_placeholder_name_from_index(unsigned int parameter_index) {
     return {parameter_index};
 }
+
+void forwarding_parameter_ptr::set_forwarded_parameter(juce::AudioProcessorParameter* parameter_to_forward) {
+    forwarded_parameter_ = parameter_to_forward;
+    if(parameter_to_forward) {
+        parameter_to_forward->addListener(this);
+    }
+}
+
 
 forwarding_parameter_ptr::operator bool() const {
     return forwarded_parameter_;
@@ -21,10 +39,6 @@ float forwarding_parameter_ptr::getValue() const {
     else {
         return 0.f;
     }
-}
-
-void forwarding_parameter_ptr::set_forwarded_parameter(juce::AudioProcessorParameter* parameter_to_forward) {
-    forwarded_parameter_ = parameter_to_forward;
 }
 
 void forwarding_parameter_ptr::setValue(float newValue) {
