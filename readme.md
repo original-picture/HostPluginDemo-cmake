@@ -41,6 +41,9 @@ cmake --build .
 - [x] actually have the hosted plugin do the audio processing
 - [x] add an error dialog box if something goes wrong when trying to load a plugin 
 - [x] parameter forwarding 
+- [x] use native window decorations when the inner plugin is running in its own top level window
+  - [ ] add icons for native window decorations
+
 - [ ] be more flexible about supporting different bus layouts
 - [ ] add a data loss warning when closing a plugin? Or maybe just use a unique save file for every plugin so nothing gets lost?
 - [ ] give `forwarding_parameter_ptr` the ability to take a `get_name_string` callback that take in the original name string and outputs some other name string

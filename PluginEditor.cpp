@@ -166,6 +166,9 @@ void HostAudioProcessorEditor::pluginChanged() {
                     const auto bg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId).darker();
                     auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor);
                     window->setAlwaysOnTop (true);
+                    window->setUsingNativeTitleBar(true);
+                    window->setName("inner plugin");
+                    window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
                     window->setContentOwned (editorComponent.release(), true);
                     window->centreAroundComponent (this, window->getWidth(), window->getHeight());
                     window->setVisible (true);
