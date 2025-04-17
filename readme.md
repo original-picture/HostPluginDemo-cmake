@@ -36,12 +36,14 @@ cmake --build .
   - interestingly, this behavior doesn't occur when closing and reopening the entire DAW
     - perhaps there's a way to exploit this and achieve the same behavior without having to add a bunch of manual checks  
   - also if you disable and then re-enable the gui with an inner plugin that has no editor, the gui of the last loaded plugin that *did* have an editor will open instead
+- [ ] a juce assert fails when using the 'X' in the upper right corner to close the host plugin when the inner plugin is running in the same window as the host plugin
 
 ## Todo
 - [x] actually have the hosted plugin do the audio processing
 - [x] add an error dialog box if something goes wrong when trying to load a plugin 
 - [x] parameter forwarding 
 - [x] use native window decorations when the inner plugin is running in its own top level window
+  - [x] remove the redundant juce close button when the plugin is running in a different window
   - [ ] add icons for native window decorations
 
 - [ ] be more flexible about supporting different bus layouts

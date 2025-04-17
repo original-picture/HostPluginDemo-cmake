@@ -69,11 +69,14 @@ class PluginEditorComponent final : public juce::Component
 {
 public:
     template <typename Callback>
-    PluginEditorComponent (std::unique_ptr<juce::AudioProcessorEditor> editorIn, Callback&& onClose)
-            : editor (std::move (editorIn)) {
+    PluginEditorComponent (std::unique_ptr<juce::AudioProcessorEditor> editorIn, Callback&& onClose, EditorStyle style)
+            : editor (std::move (editorIn)), editor_style_(style) {
 
         addAndMakeVisible(editor.get());
-        addAndMakeVisible(closeButton);
+
+        if(style == EditorStyle::thisWindow) {
+            addAndMakeVisible(closeButton); // if running in a new window, just use the native window close button
+        }
 
         childBoundsChanged (editor.get());
 
@@ -87,22 +90,12 @@ public:
     ~PluginEditorComponent();
 
 private:
+    EditorStyle editor_style_;
+
     static constexpr auto buttonHeight = 40;
 
     std::unique_ptr<juce::AudioProcessorEditor> editor;
     juce::TextButton closeButton { "Close Plugin" };
-};
-
-//==============================================================================
-class ScaledDocumentWindow final : public juce::DocumentWindow
-{
-public:
-    ScaledDocumentWindow (juce::Colour bg, float scale);
-
-    inline float getDesktopScaleFactor() const override { return juce::Desktop::getInstance().getGlobalScaleFactor() * desktopScale; }
-
-private:
-    float desktopScale = 1.0f;
 };
 
 //==============================================================================
@@ -115,10 +108,10 @@ public:
     void childBoundsChanged (Component* child) override;
     void setScaleFactor (float scale) override;
 
-private:
     void pluginChanged();
     void clearPlugin();
 
+private:
     ~HostAudioProcessorEditor() override;
 
     static constexpr auto buttonHeight = 30;
@@ -131,3 +124,29 @@ private:
     juce::TextButton closeButton { "Close Plugin" };               // reset the processor's pluginChanged callback to null if the editor gets destroyed
     float currentScaleFactor = 1.0f;                               // the processor then uses juce::NullCheckedInvocation::invoke()
 };                                                                 // in order to avoid calling HostAudioProcessorEditor::pluginChanged() with a dangling this pointer --original-picture
+
+//==============================================================================
+class ScaledDocumentWindow final : public juce::DocumentWindow
+{
+public:
+    ScaledDocumentWindow (juce::Colour bg, float scale, HostAudioProcessorEditor& owning_editor);
+
+    inline float getDesktopScaleFactor() const override { return juce::Desktop::getInstance().getGlobalScaleFactor() * desktopScale; }
+
+    virtual void closeButtonPressed();
+
+    /** Callback that is triggered when the minimise button is pressed.
+
+        This function is only called when using a non-native titlebar.
+
+        The default implementation of this calls ResizableWindow::setMinimised(), but
+        you can override it to do more customised behaviour.
+    */
+    virtual void minimiseButtonPressed();
+
+
+
+private:
+    HostAudioProcessorEditor& owning_editor_;
+    float desktopScale = 1.0f;
+};

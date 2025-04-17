@@ -57,7 +57,12 @@ void PluginEditorComponent::setScaleFactor (float scale) {
 }
 
 void PluginEditorComponent::resized() {
-    doLayout (editor.get(), closeButton, buttonHeight, getLocalBounds());
+    if(editor_style_ == EditorStyle::newWindow) {
+        setBounds(editor->getX(), editor->getY(), editor->getWidth(), editor->getHeight()); // I changed this bit in order to get rid of the gray margins in the editor window --original-picture
+    }
+    else {
+        doLayout (editor.get(), closeButton, buttonHeight, getLocalBounds()); // how it was originally in HostPluginDemo.h // FIXME: a juce assert fails here when using the 'X' in the upper right corner to close the inner plugin when the inner plugin is running in the same window as the host plugin
+    }
 }
 
 void PluginEditorComponent::childBoundsChanged (Component* child) {
@@ -75,9 +80,15 @@ PluginEditorComponent::~PluginEditorComponent() {
 }
 
 
-ScaledDocumentWindow::ScaledDocumentWindow(juce::Colour bg, float scale) : DocumentWindow ("Editor", bg, 0), desktopScale (scale) {}
+ScaledDocumentWindow::ScaledDocumentWindow(juce::Colour bg, float scale, HostAudioProcessorEditor& owning_editor) : DocumentWindow ("Editor", bg, 0), desktopScale (scale), owning_editor_(owning_editor) {}
 
+void ScaledDocumentWindow::closeButtonPressed() {
+    owning_editor_.clearPlugin();
+}
 
+void ScaledDocumentWindow::minimiseButtonPressed() {
+    setMinimised(true);
+}
 
 
 
@@ -138,17 +149,18 @@ void HostAudioProcessorEditor::setScaleFactor (float scale) {
 
 void HostAudioProcessorEditor::pluginChanged() {
     //loader.setVisible (true);
-    closeButton.setVisible (hostProcessor.editor_write_inner() != nullptr);
+    closeButton.setVisible(hostProcessor.editor_write_inner() != nullptr);
 
     if (hostProcessor.editor_write_inner() != nullptr) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
-                                                   // we'll be dereferencing one of the elements of inner_ping_pong
-                                                   // it's basically a null check (I think) --original-picture          // just in case you aren't super familiar with unique_ptr,
-    {                                                                                                                   // the lambda is the deleter --original-picture
+                                                       // we'll be dereferencing one of the elements of inner_ping_pong
+                                                       // it's basically a null check (I think) --original-picture          // just in case you aren't super familiar with unique_ptr,
+    {                                                                                                                       // the lambda is the deleter --original-picture
         auto editorComponent = std::make_unique<PluginEditorComponent> (hostProcessor.createInnerEditor(), [this]
         {
             [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([this] { clearPlugin(); });
-            jassert (posted); // lmao https://img.ifunny.co/images/80f17436f015abc60014c3603d81d6cf91a6912377fd10ea895e3533ce821a76_1.jpg
-        });
+            jassert (posted);
+        },
+        hostProcessor.getEditorStyle());
 
         editorComponent->setScaleFactor (currentScaleFactor);
         currentEditorComponent = editorComponent.get();
@@ -164,10 +176,10 @@ void HostAudioProcessorEditor::pluginChanged() {
 
                 case EditorStyle::newWindow:
                     const auto bg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId).darker();
-                    auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor);
+                    auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor, *this);
                     window->setAlwaysOnTop (true);
                     window->setUsingNativeTitleBar(true);
-                    window->setName("inner plugin");
+                    window->setName(hostProcessor.editor_write_inner()->getName());
                     window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
                     window->setContentOwned (editorComponent.release(), true);
                     window->centreAroundComponent (this, window->getWidth(), window->getHeight());
