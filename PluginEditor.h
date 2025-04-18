@@ -112,6 +112,7 @@ public:
     void clearPlugin();
 
 private:
+    void create_inner_plugin_editor_();
     ~HostAudioProcessorEditor() override;
 
     static constexpr auto buttonHeight = 30;

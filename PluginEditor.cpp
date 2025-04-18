@@ -108,7 +108,10 @@ HostAudioProcessorEditor::HostAudioProcessorEditor(HostAudioProcessor& owner)   
     addAndMakeVisible (closeButton);
     addAndMakeVisible (loader);
 
-    hostProcessor.pluginChanged();
+
+    //hostProcessor.pluginChanged();
+
+    create_inner_plugin_editor_();
 
     closeButton.onClick = [this] { clearPlugin(); };
 
@@ -148,25 +151,38 @@ void HostAudioProcessorEditor::setScaleFactor (float scale) {
 }
 
 void HostAudioProcessorEditor::pluginChanged() {
-    //loader.setVisible (true);
-    closeButton.setVisible(hostProcessor.editor_write_inner() != nullptr);
 
-    if (hostProcessor.editor_write_inner() != nullptr) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
-                                                       // we'll be dereferencing one of the elements of inner_ping_pong
-                                                       // it's basically a null check (I think) --original-picture          // just in case you aren't super familiar with unique_ptr,
+   // this->currentEditorComponent = nullptr;
+   hostProcessor.swap_read_write();
+   create_inner_plugin_editor_();
+}
+
+void HostAudioProcessorEditor::clearPlugin() {
+    currentEditorComponent = nullptr;
+    editor = nullptr;
+    hostProcessor.clearPlugin();
+}
+
+void HostAudioProcessorEditor::create_inner_plugin_editor_() {
+    //loader.setVisible (true);
+    closeButton.setVisible(hostProcessor.processor_read_inner() != nullptr);
+
+    if (hostProcessor.processor_read_inner() != nullptr) // I think part of the reason why this check is necessary because when we call createInnerEditor() on the next line,
+                                                         // we'll be dereferencing one of the elements of inner_ping_pong
+                                                         // it's basically a null check (I think) --original-picture        // just in case you aren't super familiar with unique_ptr,
     {                                                                                                                       // the lambda is the deleter --original-picture
         auto editorComponent = std::make_unique<PluginEditorComponent> (hostProcessor.createInnerEditor(), [this]
-        {
-            [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([this] { clearPlugin(); });
-            jassert (posted);
-        },
-        hostProcessor.getEditorStyle());
+                                                                        {
+                                                                            [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([this] { clearPlugin(); });
+                                                                            jassert (posted);
+                                                                        },
+                                                                        hostProcessor.getEditorStyle());
 
         editorComponent->setScaleFactor (currentScaleFactor);
         currentEditorComponent = editorComponent.get();
 
         editor = [&]() -> std::unique_ptr<Component>
-        {
+        { __debugbreak();
             switch (hostProcessor.getEditorStyle())
             {
                 case EditorStyle::thisWindow:
@@ -179,7 +195,7 @@ void HostAudioProcessorEditor::pluginChanged() {
                     auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor, *this);
                     window->setAlwaysOnTop (true);
                     window->setUsingNativeTitleBar(true);
-                    window->setName(hostProcessor.editor_write_inner()->getName());
+                    window->setName(hostProcessor.processor_read_inner()->getName());
                     window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
                     window->setContentOwned (editorComponent.release(), true);
                     window->centreAroundComponent (this, window->getWidth(), window->getHeight());
@@ -196,16 +212,6 @@ void HostAudioProcessorEditor::pluginChanged() {
         editor = nullptr;
         setSize (500, 500);
     }
-
-   // this->currentEditorComponent = nullptr;
-
-    hostProcessor.swap_read_write();
-}
-
-void HostAudioProcessorEditor::clearPlugin() {
-    currentEditorComponent = nullptr;
-    editor = nullptr;
-    hostProcessor.clearPlugin();
 }
 
 HostAudioProcessorEditor::~HostAudioProcessorEditor() {

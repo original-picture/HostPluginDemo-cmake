@@ -255,7 +255,7 @@ bool HostAudioProcessor::isPluginLoaded() const {
 
 std::unique_ptr<juce::AudioProcessorEditor> HostAudioProcessor::createInnerEditor() const {
     const juce::ScopedLock sl (innerMutex);
-    return rawToUniquePtr (editor_write_inner()->hasEditor() ? editor_write_inner()->createEditorIfNeeded() : nullptr);
+    return rawToUniquePtr (processor_read_inner()->hasEditor() ? processor_read_inner()->createEditorIfNeeded() : nullptr);
 }
 
 void HostAudioProcessor::changeListenerCallback (juce::ChangeBroadcaster* source) {
