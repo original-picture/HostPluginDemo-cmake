@@ -37,6 +37,10 @@ cmake --build .
     - perhaps there's a way to exploit this and achieve the same behavior without having to add a bunch of manual checks  
   - also if you disable and then re-enable the gui with an inner plugin that has no editor, the gui of the last loaded plugin that *did* have an editor will open instead
 - [ ] a juce assert fails when using the 'X' in the upper right corner to close the host plugin when the inner plugin is running in the same window as the host plugin
+- [x] after plugin initialization, in reaper, all forwarded parameters sliders are all the way to the left, regardless of what the parameter's value is
+  - moving a slider will change its value to be in sync with the position of the slider
+  - fixed by calling `setValueNotifyingHost` in `forwarding_parameter_ptr::set_forwarded_parameter()`
+
 
 ## Todo
 - [x] actually have the hosted plugin do the audio processing

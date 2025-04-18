@@ -227,8 +227,8 @@ void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorS
                 updateHostDisplay();
 
                 juce::NullCheckedInvocation::invoke (pluginChanged); // I moved this up here and I can't remember why lol
-            }                                                           // I've tested both versions and they seem to do the same thing,
-        }                                                               // but that could be because any difference in behavior is masked by the double-load bug --original-picture
+            }                                                        // I've tested both versions and they seem to do the same thing --original-picture
+        }
 
         // juce::NullCheckedInvocation::invoke (pluginChanged); // this line is how it is in the original HostPluginDemo.h --original-picture
     };

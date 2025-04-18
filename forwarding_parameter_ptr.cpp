@@ -23,6 +23,7 @@ void forwarding_parameter_ptr::set_forwarded_parameter(juce::AudioProcessorParam
     forwarded_parameter_ = parameter_to_forward;
     if(parameter_to_forward) {
         parameter_to_forward->addListener(this);
+        setValueNotifyingHost(forwarded_parameter_->getValue());
     }
 }
 
