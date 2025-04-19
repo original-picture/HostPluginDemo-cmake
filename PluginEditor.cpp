@@ -182,7 +182,7 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
         currentEditorComponent = editorComponent.get();
 
         editor = [&]() -> std::unique_ptr<Component>
-        { __debugbreak();
+        { 
             switch (hostProcessor.getEditorStyle())
             {
                 case EditorStyle::thisWindow:
