@@ -196,14 +196,14 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                 case EditorStyle::newWindow:
                     const auto bg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId).darker();
                     auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor, *this);
-                    set_component_native_parent_window(*window, *this); // I added this --original-picture
-                    //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
                     window->setUsingNativeTitleBar(true);
                     window->setName(hostProcessor.processor_read_inner()->getName());
                     window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
                     window->setContentOwned (editorComponent.release(), true);
                     window->centreAroundComponent (this, window->getWidth(), window->getHeight());
                     window->setVisible (true);
+                    set_component_native_parent_window(*window, *this); // I added this --original-picture
+                    //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
                     return window;
             }
 
