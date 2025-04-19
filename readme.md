@@ -57,7 +57,9 @@ cmake --build .
     - `gain_plugin_instance_0.gain`
     - `gain_plugin_instance_1.gain`
     - etc.
+  
 - [ ] suppress warnings that should only show up when a plugin is first loaded when a plugin is reloaded (e.g., because the DAW was closed and reopened)
+- [ ] add support for running the inner plugin as a native child window, instead of just using juce's `setAlwaysOnTop()`
 
 ## Code style
 The code contains a mix of `camelCase` and `snake_case`. all of JUCE's code uses `camelCase` so I use `snake_case` to make it clear which parts are written by me  

@@ -78,7 +78,8 @@ target_sources(HostPluginDemo-cmake
                PluginEditor.cpp
                PluginProcessor.cpp
 
-        forwarding_parameter_ptr.cpp
+               forwarding_parameter_ptr.cpp
+               native_window_system_impl.cpp
 )
 
 # `target_compile_definitions` adds some preprocessor definitions to our target. In a Projucer

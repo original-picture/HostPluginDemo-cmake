@@ -1,5 +1,8 @@
+
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+
+#include "native_window_system.h"
 //
 //==============================================================================
 
@@ -182,7 +185,7 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
         currentEditorComponent = editorComponent.get();
 
         editor = [&]() -> std::unique_ptr<Component>
-        { 
+        {
             switch (hostProcessor.getEditorStyle())
             {
                 case EditorStyle::thisWindow:
@@ -193,7 +196,8 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                 case EditorStyle::newWindow:
                     const auto bg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId).darker();
                     auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor, *this);
-                    window->setAlwaysOnTop (true);
+                    set_component_native_parent_window(*window, *this); // I added this --original-picture
+                    //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
                     window->setUsingNativeTitleBar(true);
                     window->setName(hostProcessor.processor_read_inner()->getName());
                     window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
