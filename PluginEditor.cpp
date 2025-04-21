@@ -202,7 +202,8 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                     window->setContentOwned (editorComponent.release(), true);
                     window->centreAroundComponent (this, window->getWidth(), window->getHeight());
                     window->setVisible (true);
-                    set_component_native_parent_window(*window, *this); // I added this --original-picture
+
+                    set_component_native_owning_window(*window, *this); // I added this --original-picture
                     //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
                     return window;
             }

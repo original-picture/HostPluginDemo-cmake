@@ -59,7 +59,14 @@ cmake --build .
     - etc.
   
 - [ ] suppress warnings that should only show up when a plugin is first loaded when a plugin is reloaded (e.g., because the DAW was closed and reopened)
-- [ ] add support for running the inner plugin as a native child window, instead of just using juce's `setAlwaysOnTop()`
+- [ ] add support for running the inner plugin as a native ~~child~~ owned window, instead of just using juce's `setAlwaysOnTop()`
+  * windowing system support:
+    - [x] windows (does the windowing system of windows even have a formal name?)
+      * Minimizing the host plugin window when the inner plugin window is [active](https://learn.microsoft.com/en-us/windows/win32/winmsg/window-features#:~:text=An%20active%20window%20is%20the%20top%2Dlevel%20window%20of%20the%20application%20with%20which%20the%20user%20is%20currently%20working.%20To%20allow%20the%20user%20to%20easily%20identify%20the%20active%20window%2C%20the%20system%20places%20it%20at%20the%20top%20of%20the%20z%2Dorder%20and%20changes%20the%20color%20of%20its%20title%20bar%20and%20border%20to%20the%20system%2Ddefined%20active%20window%20colors) causes the host window to minimize without minimizing the inner plugin window. 
+        This might just be a quirk of the windows API
+        * this doesn't seem to occur in reaper (only in juce's `AudioPluginHost`) so maybe this isn't an issue in practice?
+    - [ ] X11
+    - [ ] macos (Quartz? NSWindow? You know what I mean lol)
 
 ## Code style
 The code contains a mix of `camelCase` and `snake_case`. all of JUCE's code uses `camelCase` so I use `snake_case` to make it clear which parts are written by me  
