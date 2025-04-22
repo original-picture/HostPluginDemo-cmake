@@ -40,6 +40,8 @@ cmake --build .
 - [x] after plugin initialization, in reaper, all forwarded parameters sliders are all the way to the left, regardless of what the parameter's value is
   - moving a slider will change its value to be in sync with the position of the slider
   - fixed by calling `setValueNotifyingHost` in `forwarding_parameter_ptr::set_forwarded_parameter()`
+- [ ] incorrect juce "no compatible plugin format exists" error message when reloading the plugin on linux
+
 
 
 ## Todo

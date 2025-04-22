@@ -142,4 +142,6 @@ target_link_libraries(HostPluginDemo-cmake
                       juce::juce_graphics
                       juce::juce_gui_basics
                       juce::juce_gui_extra
+
+                      X11
 )

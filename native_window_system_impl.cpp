@@ -5,7 +5,7 @@
 #if __has_include("unistd.h")
     #if defined(__APPLE__) && defined(__MACH__)
         #include "native_window_system_impls/nswindow.cpp"
-    #elif __has_include("Xlib.h")
+    #elif __has_include("X11/Xlib.h")
         #include "native_window_system_impls/x11.cpp"
     #else
         #include "native_window_system_impls/dummy_fallback.cpp"
