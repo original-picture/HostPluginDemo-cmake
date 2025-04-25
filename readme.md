@@ -42,6 +42,8 @@ cmake --build .
   - fixed by calling `setValueNotifyingHost` in `forwarding_parameter_ptr::set_forwarded_parameter()`
 - [ ] incorrect juce "no compatible plugin format exists" error message when reloading the plugin on linux
 - [ ] segfault when loading certain plugins on linux (calf compressor)
+- [ ] `jassert` failure on application exit on linux ([juce_LeakedObjectDetector.h](./lib/JUCE/modules/juce_core/memory/juce_LeakedObjectDetector.h) line 104)
+- [ ] VST3 `kNotInitialized` errors when loading a plugin (linux)
 
 
 ## Todo
