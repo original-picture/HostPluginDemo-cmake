@@ -106,7 +106,7 @@ HostAudioProcessorEditor::HostAudioProcessorEditor(HostAudioProcessor& owner)   
                                                                                               }),
                                                                                       scopedCallback (owner.pluginChanged, [this] { pluginChanged(); })
 {
-    set_handler();
+    //set_handler();
 
     setSize (500, 500);
     setResizable (false, false);

@@ -69,7 +69,7 @@ cmake --build .
       * Minimizing the host plugin window when the inner plugin window is [active](https://learn.microsoft.com/en-us/windows/win32/winmsg/window-features#:~:text=An%20active%20window%20is%20the%20top%2Dlevel%20window%20of%20the%20application%20with%20which%20the%20user%20is%20currently%20working.%20To%20allow%20the%20user%20to%20easily%20identify%20the%20active%20window%2C%20the%20system%20places%20it%20at%20the%20top%20of%20the%20z%2Dorder%20and%20changes%20the%20color%20of%20its%20title%20bar%20and%20border%20to%20the%20system%2Ddefined%20active%20window%20colors) causes the host window to minimize without minimizing the inner plugin window. 
         This might just be a quirk of the windows API
         * this doesn't seem to occur in reaper (only in juce's `AudioPluginHost`) so maybe this isn't an issue in practice?
-    - [ ] X11
+    - [x] X11
     - [ ] macos (Quartz? NSWindow? You know what I mean lol)
 
 ## Code style
