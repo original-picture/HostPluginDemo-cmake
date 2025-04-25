@@ -78,7 +78,7 @@ public:
             addAndMakeVisible(closeButton); // if running in a new window, just use the native window close button
         }
 
-        childBoundsChanged (editor.get());
+        childBoundsChanged (editor.get()); // FIXME: segfault here sometimes?
 
         closeButton.onClick = std::forward<Callback> (onClose);
     }

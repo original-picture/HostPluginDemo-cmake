@@ -41,7 +41,7 @@ cmake --build .
   - moving a slider will change its value to be in sync with the position of the slider
   - fixed by calling `setValueNotifyingHost` in `forwarding_parameter_ptr::set_forwarded_parameter()`
 - [ ] incorrect juce "no compatible plugin format exists" error message when reloading the plugin on linux
-
+- [ ] segfault when loading certain plugins on linux (calf compressor)
 
 
 ## Todo
