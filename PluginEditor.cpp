@@ -132,10 +132,10 @@ void HostAudioProcessorEditor::resized() {
 }
 
 void HostAudioProcessorEditor::childBoundsChanged (Component* child) {
-    if (child != editor.get())
+    if (child != inner_plugin_editor_component_or_top_level_window_.get())
     return;
     
-    const auto size = editor != nullptr ? editor->getLocalBounds()
+    const auto size = inner_plugin_editor_component_or_top_level_window_ != nullptr ? inner_plugin_editor_component_or_top_level_window_->getLocalBounds()
                                         : juce::Rectangle<int>();
     
     setSize (size.getWidth(), size.getHeight());
@@ -148,7 +148,7 @@ void HostAudioProcessorEditor::setScaleFactor (float scale) {
     [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([ref = SafePointer<HostAudioProcessorEditor> (this), scale]
                                                                     {
                                                                         if (auto* r = ref.getComponent())
-                                                                            if (auto* e = r->currentEditorComponent)
+                                                                            if (auto* e = r->inner_plugin_editor_component_ref_)
                                                                                 e->setScaleFactor (scale);
                                                                     });
     
@@ -163,8 +163,8 @@ void HostAudioProcessorEditor::pluginChanged() {
 }
 
 void HostAudioProcessorEditor::clearPlugin() {
-    currentEditorComponent = nullptr;
-    editor = nullptr;
+    inner_plugin_editor_component_ref_ = nullptr;
+    inner_plugin_editor_component_or_top_level_window_ = nullptr;
     hostProcessor.clearPlugin();
 }
 
@@ -184,40 +184,42 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                                                                         hostProcessor.getEditorStyle());
 
         editorComponent->setScaleFactor (currentScaleFactor);
-        currentEditorComponent = editorComponent.get();
+        inner_plugin_editor_component_ref_ = editorComponent.get(); // it's okay to store the raw pointer of this local unique_ptr (editorComponent) in a member variable (currentEditorComponent)
+                                                        // because editorComponent gets moved into editor (also a member variable) in the next piece of code, thereby extending its lifetime --original-picture
 
-        editor = [&]() -> std::unique_ptr<Component>
-        {
-            switch (hostProcessor.getEditorStyle())
+        switch (hostProcessor.getEditorStyle()) // this logic was originally inside a lambda that returned a Component that then got assigned to editor
+        {                                       // I thought that was confusing, so I reimplemented it without the lambda --original-picture
+            case EditorStyle::thisWindow:
             {
-                case EditorStyle::thisWindow:
-                    addAndMakeVisible (editorComponent.get());
-                    setSize (editorComponent->getWidth(), editorComponent->getHeight());
-                    return std::move (editorComponent);
-
-                case EditorStyle::newWindow:
-                    const auto bg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId).darker();
-                    auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor, *this);
-                    window->setUsingNativeTitleBar(true);
-                    window->setName(hostProcessor.processor_read_inner()->getName());
-                    window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
-                    window->setContentOwned (editorComponent.release(), true);
-                    window->centreAroundComponent (this, window->getWidth(), window->getHeight());
-                    window->setVisible (true);
-
-                    window->setTransientFor(this);
-                    //set_component_native_owning_window(*window, *this); // I added this --original-picture
-                    //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
-                    return window;
+                addAndMakeVisible (editorComponent.get());
+                setSize (editorComponent->getWidth(), editorComponent->getHeight());
+                inner_plugin_editor_component_or_top_level_window_ = std::move (editorComponent);
             }
 
-            jassertfalse;
-            return nullptr;
-        }();
+            case EditorStyle::newWindow:
+            {
+                const auto bg = getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId).darker();
+                auto window = std::make_unique<ScaledDocumentWindow> (bg, currentScaleFactor, *this);
+                window->setUsingNativeTitleBar(true);
+                window->setName(hostProcessor.processor_read_inner()->getName());
+                window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton|juce::DocumentWindow::closeButton, false);
+                window->setContentOwned (editorComponent.release(), true);
+                window->centreAroundComponent (this, window->getWidth(), window->getHeight());
+                window->setVisible (true);
+
+                window->setTransientFor(this);
+                //set_component_native_owning_window(*window, *this); // I added this --original-picture
+                //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
+                inner_plugin_editor_component_or_top_level_window_ = std::move(window);
+            }
+
+            default:
+                jassertfalse;
+        }
     }
     else
     {
-        editor = nullptr;
+        inner_plugin_editor_component_or_top_level_window_ = nullptr;
         setSize (500, 500);
     }
 }

@@ -119,8 +119,18 @@ private:
 
     HostAudioProcessor& hostProcessor;
     PluginLoaderComponent loader;
-    std::unique_ptr<Component> editor;
-    PluginEditorComponent* currentEditorComponent = nullptr;
+    std::unique_ptr<Component> inner_plugin_editor_component_or_top_level_window_; // because the inner plugin's editor can run either as a child component of the host plugin's editor
+                                                                                   // OR as its own top level window, what this member variable contains depends on how the user loaded the plugin
+                                                                                   // I renamed it. Originally, it was just called editor, and I thought that was confusing
+
+
+
+    PluginEditorComponent* inner_plugin_editor_component_ref_ = nullptr; // this variable, on the other hand, always points to the actual editor of the inner plugin
+                                                                         // if the inner plugin was loaded as a child component, then inner_plugin_editor_component_ref_ == inner_plugin_editor_child_component_or_top_level_window_.get()
+                                                                         // if the inner plugin was loaded as a top level window, then inner_plugin_editor_component_ref_ == inner_plugin_editor_child_component_or_top_level_window_.getChildComponent(0) (there's only one child component)
+    
+    
+    
     juce::ScopedValueSetter<std::function<void()>> scopedCallback; // a ScopedValueSetter is used here in order to automatically
     juce::TextButton closeButton { "Close Plugin" };               // reset the processor's pluginChanged callback to null if the editor gets destroyed
     float currentScaleFactor = 1.0f;                               // the processor then uses juce::NullCheckedInvocation::invoke()
