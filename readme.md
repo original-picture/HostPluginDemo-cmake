@@ -31,7 +31,7 @@ cmake --build .
     - will probably have to use change listeners here
 - [ ] mysterious freeze on plugin load
 - [ ] JUCE assert fails when `HostPluginDemo-cmake` is hosting itself and the user presses the outermost close button
-- [ ] The behavior of the UI button in Reaper is confusing. It will sometimes reopen a closed inner plugin editor and doesn't seem to reopen an inner plugin editor that *was* open
+- [x] The behavior of the UI button in Reaper is confusing. It will sometimes reopen a closed inner plugin editor and doesn't seem to reopen an inner plugin editor that *was* open
   - after doing more testing, I've realized that this behavior isn't random. It oscillates between opening the editor and not opening the editor
   - interestingly, this behavior doesn't occur when closing and reopening the entire DAW
     - perhaps there's a way to exploit this and achieve the same behavior without having to add a bunch of manual checks  

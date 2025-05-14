@@ -156,16 +156,16 @@ juce::AudioProcessorParameter::Category forwarding_parameter_ptr::getCategory() 
     }
 }
 
-/*
 juce::String forwarding_parameter_ptr::getCurrentValueAsText() const {
     if(forwarded_parameter_) {
         return forwarded_parameter_->getCurrentValueAsText();
     }
     else {
-        return getTe;
+        return "No value -- parameter not in use";
     }
 }
-*/
+
+
 juce::StringArray forwarding_parameter_ptr::getAllValueStrings() const {
     if(forwarded_parameter_) {
         return forwarded_parameter_->getAllValueStrings();

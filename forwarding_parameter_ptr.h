@@ -48,22 +48,22 @@ public:
 
     /// every member function here just forwards the corresponding member function of the parameter that this object points to
     /// if there is no forwarded parameter, they return default values
-    virtual float getValue() const;
-    virtual void setValue (float newValue);
-    virtual float getDefaultValue() const;
-    virtual juce::String getName (int maximumStringLength) const;
-    virtual juce::String getLabel() const;
-    virtual int getNumSteps() const;
-    virtual bool isDiscrete() const;
-    virtual bool isBoolean() const;
-    virtual juce::String getText (float normalisedValue, int maximumStringLength) const;
-    virtual float getValueForText (const juce::String& text) const;
-    virtual bool isOrientationInverted() const;
-    virtual bool isAutomatable() const;
-    virtual bool isMetaParameter() const;
-    virtual Category getCategory() const;
-    //virtual juce::String getCurrentValueAsText() const;
-    virtual juce::StringArray getAllValueStrings() const;
+    float getValue() const override;
+    void setValue (float newValue) override;
+    float getDefaultValue() const override;
+    juce::String getName (int maximumStringLength) const override;
+    juce::String getLabel() const override;
+    int getNumSteps() const override;
+    bool isDiscrete() const override;
+    bool isBoolean() const override;
+    juce::String getText (float normalisedValue, int maximumStringLength) const override;
+    float getValueForText (const juce::String& text) const override;
+    bool isOrientationInverted() const override;
+    bool isAutomatable() const override;
+    bool isMetaParameter() const override;
+    Category getCategory() const override;
+    juce::String getCurrentValueAsText() const override;
+    juce::StringArray getAllValueStrings() const override;
 
-    virtual ~forwarding_parameter_ptr() = default;
+    ~forwarding_parameter_ptr() override = default;
 };

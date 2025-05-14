@@ -185,7 +185,7 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
 
         editorComponent->setScaleFactor (currentScaleFactor);
         inner_plugin_editor_component_ref_ = editorComponent.get(); // it's okay to store the raw pointer of this local unique_ptr (editorComponent) in a member variable (currentEditorComponent)
-                                                        // because editorComponent gets moved into editor (also a member variable) in the next piece of code, thereby extending its lifetime --original-picture
+                                                                    // because editorComponent gets moved into editor (also a member variable) in the next piece of code, thereby extending its lifetime --original-picture
 
         switch (hostProcessor.getEditorStyle()) // this logic was originally inside a lambda that returned a Component that then got assigned to editor
         {                                       // I thought that was confusing, so I reimplemented it without the lambda --original-picture
@@ -194,6 +194,7 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                 addAndMakeVisible (editorComponent.get());
                 setSize (editorComponent->getWidth(), editorComponent->getHeight());
                 inner_plugin_editor_component_or_top_level_window_ = std::move (editorComponent);
+                break;
             }
 
             case EditorStyle::newWindow:
@@ -207,10 +208,14 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                 window->centreAroundComponent (this, window->getWidth(), window->getHeight());
                 window->setVisible (true);
 
+                //window->addToDesktop(0, this->getPeer()->getNativeHandle());
                 window->setTransientFor(this);
+
+                closeButton.addToDesktop(0, this->getPeer()->getNativeHandle());
                 //set_component_native_owning_window(*window, *this); // I added this --original-picture
                 //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
                 inner_plugin_editor_component_or_top_level_window_ = std::move(window);
+                break;
             }
 
             default:
