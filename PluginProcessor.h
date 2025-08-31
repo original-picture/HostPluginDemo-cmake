@@ -71,8 +71,7 @@ public:
     inline       std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()         { return inner_ping_pong[processor_read_ping_pong_index_]; }
     inline const std::unique_ptr<juce::AudioPluginInstance>& processor_read_inner()   const { return inner_ping_pong[processor_read_ping_pong_index_]; }
 
-    /// this is all just ideas. I haven't hooked any of this up yet. So it might be completely wrong
-    std::atomic<bool> inside_process_block; // basically a spinlock
+
     std::atomic<bool> plugin_already_changed_in_this_process_block_call; // this warrants some explanation
                                                                          // Long story short, it's possible for swap_read_write to get called while processBlock is still using processor_read_inner()
                                                                          // this isn't an issue on its own (doesn't cause a data race), because the usage of memory_order_release ensures that by the time the swapping atomic write is visible
@@ -85,16 +84,17 @@ public:
                                                                          // then, before trying to modify editor_write_inner(), the editor will check to see if(inside_process_block&&plugin_already_changed_in_this_process_block_call)
                                                                          // and if it evaluates to true it will return from whatever function was being called without modifying editor_write_inner()
                                                                          // I think this is an okay solution because I don't think it's physically possible for a user to interact with the gui fast enough to load multiple plugins within one processBlock call,
-                                                                         // (maybe it could happen if the gui freezes or something and a bunch of changes get reported to the processor at almost the same time)
+                                                                         // (maybe it could happen if the gui freezes or something and a bunch of queued changes get reported to the processor at almost the same time)
                                                                          // so this early out path will likely never be hit
 
 private:
     juce::CriticalSection innerMutex; // I don't understand why this is necessary, because afaict this mutex only ever gets locked on the message thread
                                       // maybe they were planning on locking it in processBlock() (on the audio thread), which would make sense functionally, because things like the inner plugin changing need to be synchronized
-                                      // but mutexes really shouldn't be used on the audio thread to begin with, so idk --original-picture
+                                      // but mutexes really shouldn't be used on the audio thread to begin with, so idk
+                                      // --original-picture
 
     std::unique_ptr<juce::AudioPluginInstance> inner_ping_pong[2] = {nullptr, nullptr}; // my lock-free solution for synchronizing plugin changes is to hold two AudioPluginInstances and ping pong between them using an atomic index
-                                                                                        // so that one plugin can be getting loaded on the message thread while the other is being used on the audio thread without either messing with the other's data
+                                                                                        // so that one plugin can be loaded on the message thread while the other is being used on the audio thread without either messing with the other's data
                                                                                         // --original-picture
 
     //std::unique_ptr<juce::AudioPluginInstance> inner; // this is how it looked in the original HostPluginDemo --original-picture

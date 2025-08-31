@@ -83,21 +83,14 @@ void HostAudioProcessor::reset() {
 void HostAudioProcessor::processBlock (juce::AudioBuffer<float>& audio_buffer, juce::MidiBuffer& midi_buffer) {
     jassert (! isUsingDoublePrecision());
 
+    plugin_already_changed_in_this_process_block_call = false;
+
     bool current_inner_index = processor_read_ping_pong_index_;
 
     auto& inner = inner_ping_pong[current_inner_index];
     if(inner) {
         inner->processBlock(audio_buffer, midi_buffer);
     }
-
-    /*for(unsigned channel_i = 0; channel_i < buf.getNumChannels(); ++channel_i) {
-        auto dest = buf.getWritePointer(channel_i);
-        auto src = buf.getReadPointer(channel_i);
-
-        for(unsigned sample_i = 0; sample_i < buf.getNumSamples(); ++sample_i) {
-            dest[sample_i] = src[sample_i];
-        }
-    }*/
 }
 
 void HostAudioProcessor::processBlock (juce::AudioBuffer<double>& audio_buffer, juce::MidiBuffer& midi_buffer) {
@@ -112,6 +105,8 @@ void HostAudioProcessor::processBlock (juce::AudioBuffer<double>& audio_buffer, 
 }
 
 void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
+    suspendProcessing(true);
+
     const juce::ScopedLock sl (innerMutex); // FIXME there's a data race here because this usually gets called from the message thread, but I'm accessing processor_read_inner(), which belongs to the audio thread
                                             // --original-picture
     juce::XmlElement xml ("state");
@@ -132,6 +127,8 @@ void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
 
     const auto text = xml.toString();
     destData.replaceAll (text.toRawUTF8(), text.getNumBytesAsUTF8());
+
+    suspendProcessing(false);
 }
 
 void HostAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
@@ -153,6 +150,12 @@ void HostAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 }
 
 void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorStyle where, const juce::MemoryBlock& mb) {
+    if(plugin_already_changed_in_this_process_block_call) {
+        return;
+    }
+
+    plugin_already_changed_in_this_process_block_call = true;
+
     const juce::ScopedLock sl (innerMutex);
 
     const auto callback = [this, where, mb] (std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& error)
@@ -182,9 +185,9 @@ void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorS
         // configuration that will be used. The AudioBuffer passed to the inner plugin must also
         // exactly match this layout.
 
-        // ^
-        // I did what the juce people described here
-        // --original-picture
+        /// ^
+        /// I did what the juce people described here
+        /// --original-picture
 
 
         if(active) { // I don't understand what active does --original-picture

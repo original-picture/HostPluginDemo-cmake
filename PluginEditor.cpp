@@ -209,7 +209,8 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                 window->setVisible (true);
 
                 //window->addToDesktop(0, this->getPeer()->getNativeHandle());
-                window->setTransientFor(this);
+                this->getPeer()->addFloatingChildPeer(window->getPeer());
+                //window->setTransientFor(this);
 
                 closeButton.addToDesktop(0, this->getPeer()->getNativeHandle());
                 //set_component_native_owning_window(*window, *this); // I added this --original-picture

@@ -16,8 +16,8 @@ cmake_minimum_required(VERSION 3.22)
 
 project(HostPluginDemo-cmake-project VERSION 0.0.1)
 
-set(JUCE_BUILD_EXTRAS ON)
-set(JUCE_BUILD_EXAMPLES ON)
+# set(JUCE_BUILD_EXTRAS ON)
+# set(JUCE_BUILD_EXAMPLES ON)
 
 add_subdirectory(lib/JUCE)
 
