@@ -27,6 +27,7 @@ public:
         // this is a lambda that returns a lambda that calls a lambda lol
         // the outermost lambda is used to select the EditorStyle
         // the lambda one layer in gathers the information it needs to call callback, the innermost lambdas
+        // I (original-picture) did not write this
         // --original-picture
         const auto getCallback = [this, &list, cb = std::forward<Callback> (callback)] (EditorStyle style)
         {
@@ -65,18 +66,18 @@ private:
 
 
 //==============================================================================
-class PluginEditorComponent final : public juce::Component
+class HostedPluginEditorComponent final : public juce::Component
 {
 public:
     template <typename Callback>
-    PluginEditorComponent (std::unique_ptr<juce::AudioProcessorEditor> editorIn, Callback&& onClose, EditorStyle style)
+    HostedPluginEditorComponent (std::unique_ptr<juce::AudioProcessorEditor> editorIn, Callback&& onClose, EditorStyle style)
             : editor (std::move (editorIn)), editor_style_(style) {
 
         addAndMakeVisible(editor.get());
 
         if(style == EditorStyle::thisWindow) {
             addAndMakeVisible(closeButton); // if running in a new window, just use the native window close button
-        }
+        }                                   // --original-picture
 
         childBoundsChanged (editor.get()); // FIXME: segfault here sometimes?
 
@@ -87,7 +88,7 @@ public:
     void resized() override;
     void childBoundsChanged (juce::Component* child) override;
 
-    ~PluginEditorComponent();
+    ~HostedPluginEditorComponent();
 
 private:
     EditorStyle editor_style_;
@@ -111,6 +112,8 @@ public:
     void pluginChanged();
     void clearPlugin();
 
+    void parentHierarchyChanged() override;
+
 private:
     void create_inner_plugin_editor_();
     ~HostAudioProcessorEditor() override;
@@ -121,20 +124,19 @@ private:
     PluginLoaderComponent loader;
     std::unique_ptr<Component> inner_plugin_editor_component_or_top_level_window_; // because the inner plugin's editor can run either as a child component of the host plugin's editor
                                                                                    // OR as its own top level window, what this member variable contains depends on how the user loaded the plugin
-                                                                                   // I renamed it. Originally, it was just called editor, and I thought that was confusing
+                                                                                   // Originally, it was just called editor. I renamed it because I thought that was vague confusing
 
-
-
-    PluginEditorComponent* inner_plugin_editor_component_ref_ = nullptr; // this variable, on the other hand, always points to the actual editor of the inner plugin
-                                                                         // if the inner plugin was loaded as a child component, then inner_plugin_editor_component_ref_ == inner_plugin_editor_child_component_or_top_level_window_.get()
-                                                                         // if the inner plugin was loaded as a top level window, then inner_plugin_editor_component_ref_ == inner_plugin_editor_child_component_or_top_level_window_.getChildComponent(0) (there's only one child component)
+    HostedPluginEditorComponent* inner_plugin_editor_component_ref_ = nullptr; // this variable, on the other hand, always points to the actual editor of the inner plugin
+                                                                               // if the inner plugin was loaded as a child component, then inner_plugin_editor_component_ref_ == inner_plugin_editor_child_component_or_top_level_window_.get()
+                                                                               // if the inner plugin was loaded as a top level window, then inner_plugin_editor_component_ref_ == inner_plugin_editor_child_component_or_top_level_window_.getChildComponent(0) (there's only one child component)
     
     
     
     juce::ScopedValueSetter<std::function<void()>> scopedCallback; // a ScopedValueSetter is used here in order to automatically
     juce::TextButton closeButton { "Close Plugin" };               // reset the processor's pluginChanged callback to null if the editor gets destroyed
     float currentScaleFactor = 1.0f;                               // the processor then uses juce::NullCheckedInvocation::invoke()
-};                                                                 // in order to avoid calling HostAudioProcessorEditor::pluginChanged() with a dangling this pointer --original-picture
+};                                                                 // in order to avoid calling HostAudioProcessorEditor::pluginChanged() with a dangling this pointer
+                                                                   // --original-picture
 
 //==============================================================================
 class ScaledDocumentWindow final : public juce::DocumentWindow

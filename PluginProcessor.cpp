@@ -1,23 +1,25 @@
+
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-
+#include "lambda_wrapper_change_listener.h"
 
 HostAudioProcessor::HostAudioProcessor()
         : AudioProcessor (BusesProperties().withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                                            .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
 {
-    appProperties.setStorageParameters ([&]
-                                        {
-                                            juce::PropertiesFile::Options opt;
-                                            opt.applicationName = getName();
-                                            opt.commonToAllUsers = false;
-                                            opt.doNotSave = false;
-                                            opt.filenameSuffix = ".props";
-                                            opt.ignoreCaseOfKeyNames = false;
-                                            opt.storageFormat = juce::PropertiesFile::StorageFormat::storeAsXML;
-                                            opt.osxLibrarySubFolder = "Application Support";
-                                            return opt;
-                                        }());
+    {
+        juce::PropertiesFile::Options opt;
+
+        opt.applicationName = getName();
+        opt.commonToAllUsers = false;
+        opt.doNotSave = false;
+        opt.filenameSuffix = ".props";
+        opt.ignoreCaseOfKeyNames = false;
+        opt.storageFormat = juce::PropertiesFile::StorageFormat::storeAsXML;
+        opt.osxLibrarySubFolder = "Application Support";
+
+        appProperties.setStorageParameters(opt);
+    }
 
     pluginFormatManager.addDefaultFormats();
 
@@ -39,10 +41,10 @@ bool HostAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
     const auto& mainInput  = layouts.getMainInputChannelSet();
     
     if (! mainInput.isDisabled() && mainInput != mainOutput)
-    return false;
+        return false;
     
     if (mainOutput.size() > 2)
-    return false;
+        return false;
     
     return true;
 }
@@ -93,17 +95,6 @@ void HostAudioProcessor::processBlock (juce::AudioBuffer<float>& audio_buffer, j
     }
 }
 
-void HostAudioProcessor::processBlock (juce::AudioBuffer<double>& audio_buffer, juce::MidiBuffer& midi_buffer) {
-    jassert (! isUsingDoublePrecision());
-
-    bool current_inner_index = processor_read_ping_pong_index_;
-
-    auto& inner = inner_ping_pong[current_inner_index];
-    if(inner) {
-        inner->processBlock(audio_buffer, midi_buffer);
-    }
-}
-
 void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
     suspendProcessing(true);
 
@@ -132,6 +123,8 @@ void HostAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
 }
 
 void HostAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+    suspendProcessing(true);
+
     const juce::ScopedLock sl (innerMutex);
 
     auto xml = juce::XmlDocument::parse (juce::String (juce::CharPointer_UTF8 (static_cast<const char*> (data)), (size_t) sizeInBytes));
@@ -146,7 +139,13 @@ void HostAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
         setNewPlugin (pd,
                       (EditorStyle) xml->getIntAttribute (editorStyleTag, 0),
                       innerState);
+
+        // if(editor_write_inner()) {
+        //     editor_write_inner()->setStateInformation(innerState.getData(), innerState.getSize());
+        // }
     }
+
+    suspendProcessing(false);
 }
 
 void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorStyle where, const juce::MemoryBlock& mb) {
@@ -158,7 +157,7 @@ void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorS
 
     const juce::ScopedLock sl (innerMutex);
 
-    const auto callback = [this, where, mb] (std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& error)
+        const auto callback = [this, where, mb] (std::unique_ptr<juce::AudioPluginInstance> instance, const juce::String& error)
     {
         if (error.isNotEmpty())
         {
@@ -201,7 +200,7 @@ void HostAudioProcessor::setNewPlugin(const juce::PluginDescription& pd, EditorS
                 editor_write_inner().reset();
             }
             else {
-                jassert(editor_write_inner()->setBusesLayout(getBusesLayout()));
+                //jassert(editor_write_inner()->setBusesLayout(getBusesLayout()));
                 editor_write_inner()->setRateAndBufferSizeDetails (getSampleRate(), getBlockSize());
                 editor_write_inner()->prepareToPlay (getSampleRate(), getBlockSize());
 

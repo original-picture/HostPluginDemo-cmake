@@ -54,12 +54,12 @@ void PluginLoaderComponent::Buttons::resized() {
 
 
 
-void PluginEditorComponent::setScaleFactor (float scale) {
+void HostedPluginEditorComponent::setScaleFactor (float scale) {
     if (editor != nullptr)
         editor->setScaleFactor (scale);
 }
 
-void PluginEditorComponent::resized() {
+void HostedPluginEditorComponent::resized() {
     if(editor_style_ == EditorStyle::newWindow) {
         setBounds(editor->getX(), editor->getY(), editor->getWidth(), editor->getHeight()); // I changed this bit in order to get rid of the gray margins in the editor window --original-picture
     }
@@ -68,17 +68,17 @@ void PluginEditorComponent::resized() {
     }
 }
 
-void PluginEditorComponent::childBoundsChanged (Component* child) {
+void HostedPluginEditorComponent::childBoundsChanged (Component* child) {
     if (child != editor.get())
     return;
-    
+
     const auto size = editor != nullptr ? editor->getLocalBounds()
                                         : juce::Rectangle<int>();
-    
+
     setSize (size.getWidth(), margin + buttonHeight + size.getHeight());
 }
 
-PluginEditorComponent::~PluginEditorComponent() {
+HostedPluginEditorComponent::~HostedPluginEditorComponent() {
 
 }
 
@@ -134,28 +134,28 @@ void HostAudioProcessorEditor::resized() {
 void HostAudioProcessorEditor::childBoundsChanged (Component* child) {
     if (child != inner_plugin_editor_component_or_top_level_window_.get())
     return;
-    
+
     const auto size = inner_plugin_editor_component_or_top_level_window_ != nullptr ? inner_plugin_editor_component_or_top_level_window_->getLocalBounds()
                                         : juce::Rectangle<int>();
-    
+
     setSize (size.getWidth(), size.getHeight());
 }
 
 void HostAudioProcessorEditor::setScaleFactor (float scale) {
     currentScaleFactor = scale;
     AudioProcessorEditor::setScaleFactor (scale);
-    
+
     [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([ref = SafePointer<HostAudioProcessorEditor> (this), scale]
                                                                     {
                                                                         if (auto* r = ref.getComponent())
                                                                             if (auto* e = r->inner_plugin_editor_component_ref_)
                                                                                 e->setScaleFactor (scale);
                                                                     });
-    
+
     jassert (posted);
 }
 
-void HostAudioProcessorEditor::pluginChanged() {
+void HostAudioProcessorEditor:: pluginChanged() {
 
    // this->currentEditorComponent = nullptr;
    hostProcessor.swap_read_write();
@@ -168,6 +168,20 @@ void HostAudioProcessorEditor::clearPlugin() {
     hostProcessor.clearPlugin();
 }
 
+void HostAudioProcessorEditor::parentHierarchyChanged() {
+    juce::ComponentPeer* parent,
+                       * child;
+
+    if((parent = this->getPeer()) &&
+       inner_plugin_editor_component_or_top_level_window_ &&
+       (child = inner_plugin_editor_component_or_top_level_window_->getPeer())) {
+
+        parent->addFloatingChildPeer(child);
+
+        child->setVisible(true);
+    }
+}
+
 void HostAudioProcessorEditor::create_inner_plugin_editor_() {
     //loader.setVisible (true);
     closeButton.setVisible(hostProcessor.processor_read_inner() != nullptr);
@@ -176,7 +190,7 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                                                          // we'll be dereferencing one of the elements of inner_ping_pong
                                                          // it's basically a null check (I think) --original-picture        // just in case you aren't super familiar with unique_ptr,
     {                                                                                                                       // the lambda is the deleter --original-picture
-        auto editorComponent = std::make_unique<PluginEditorComponent> (hostProcessor.createInnerEditor(), [this]
+        auto editorComponent = std::make_unique<HostedPluginEditorComponent> (hostProcessor.createInnerEditor(), [this]
                                                                         {
                                                                             [[maybe_unused]] const auto posted = juce::MessageManager::callAsync ([this] { clearPlugin(); });
                                                                             jassert (posted);
@@ -208,14 +222,21 @@ void HostAudioProcessorEditor::create_inner_plugin_editor_() {
                 window->centreAroundComponent (this, window->getWidth(), window->getHeight());
                 window->setVisible (true);
 
-                //window->addToDesktop(0, this->getPeer()->getNativeHandle());
-                this->getPeer()->addFloatingChildPeer(window->getPeer());
+
+                 //window->addToDesktop(0, this->getPeer()->getNativeHandle());
+                  if(auto peer = this->getPeer()) { // FIXME: getPeer() returns null here if you close reaper's fx window and then reopen it
+                      peer->addFloatingChildPeer(window->getPeer());
+                  }
                 //window->setTransientFor(this);
 
-                closeButton.addToDesktop(0, this->getPeer()->getNativeHandle());
+                //closeButton.addToDesktop(0, this->getPeer()->getNativeHandle());
                 //set_component_native_owning_window(*window, *this); // I added this --original-picture
                 //window->setAlwaysOnTop (true);                    // this is how it was in the original juce version --original-picture
                 inner_plugin_editor_component_or_top_level_window_ = std::move(window);
+
+                parentHierarchyChanged(); //
+
+
                 break;
             }
 

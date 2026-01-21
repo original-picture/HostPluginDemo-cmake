@@ -2,7 +2,7 @@
 This is a CMake port of JUCE's [HostPluginDemo](https://github.com/juce-framework/JUCE/blob/master/examples/Plugins/HostPluginDemo.h), which, to my knowledge, is only available as a JUCE [PIP](https://forum.juce.com/t/what-is-a-pip/26821)  
 Unlike the original HostPluginDemo, this plugin actually implements audio processing  
 I've also added comments explaining parts of the code that I found confusing  
-Fair warning: I'm very new to developing with JUCE, so the chances that you'll find some non-idiomatic or otherwise weird code here are high
+This project is very much still a WIP! Gnarly code is to be expected. Read at your own risk...
 
 ## Build 
 ```shell
@@ -44,7 +44,7 @@ cmake --build .
 - [ ] segfault when loading certain plugins on linux (calf compressor)
 - [ ] `jassert` failure on application exit on linux ([juce_LeakedObjectDetector.h](./lib/JUCE/modules/juce_core/memory/juce_LeakedObjectDetector.h) line 104)
 - [ ] VST3 `kNotInitialized` errors when loading a plugin (linux)
-
+- [ ] freeze that occurs when closing the UI when the hosted plugin is running in the same window as the host
 
 ## Todo
 - [x] actually have the hosted plugin do the audio processing

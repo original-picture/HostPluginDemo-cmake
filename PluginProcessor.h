@@ -27,8 +27,6 @@ public:
     // plugin instance was never modified (deleted, replaced etc.) during a call to processBlock.
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) final;
 
-    void processBlock (juce::AudioBuffer<double>&, juce::MidiBuffer&) final;
-
     inline bool hasEditor() const override                         { return true; }
     inline juce::AudioProcessorEditor* createEditor() override;
 
